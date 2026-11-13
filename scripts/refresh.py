@@ -16,7 +16,10 @@ FUELS = {"B7_STANDARD": "d", "E10": "p", "B7_PREMIUM": "sd", "E5": "sp"}
 
 
 def http(method, url, body=None, token=None, tries=4):
-    headers = {"Accept": "application/json", "User-Agent": "uk-fuel-tracker/1.0"}
+    headers = {
+        "Accept": "application/json",
+        "User-Agent": "Mozilla/5.0 (compatible; uk-fuel-tracker/1.0)",
+    }
     data = None
     if body is not None:
         data = json.dumps(body).encode()
@@ -29,14 +32,18 @@ def http(method, url, body=None, token=None, tries=4):
             with urllib.request.urlopen(req, timeout=90) as r:
                 return json.loads(r.read().decode())
         except urllib.error.HTTPError as e:
-            if e.code in (400, 404) and "batch-number" in url:
+            body_txt = e.read().decode(errors="replace")[:500]
+            print(f"HTTP {e.code} from {url}: {body_txt}", flush=True)
+            if e.code in (400, 403, 404) and ("batch-number" in url or "oauth" in url):
                 raise
             if e.code in (429, 500, 502, 503, 504) and n < tries - 1:
-                time.sleep(10 * (n + 1)); continue
+                time.sleep(10 * (n + 1))
+                continue
             raise
         except (urllib.error.URLError, TimeoutError):
             if n < tries - 1:
-                time.sleep(10 * (n + 1)); continue
+                time.sleep(10 * (n + 1))
+                continue
             raise
 
 
@@ -63,9 +70,11 @@ def rows_of(j):
 
 
 def get_token():
-    cid, sec = os.environ.get("FF_CLIENT_ID"), os.environ.get("FF_CLIENT_SECRET")
+    cid = os.environ.get("FF_CLIENT_ID", "").strip()
+    sec = os.environ.get("FF_CLIENT_SECRET", "").strip()
     if not cid or not sec:
         sys.exit("Set FF_CLIENT_ID and FF_CLIENT_SECRET.")
+    print(f"Client ID length: {len(cid)}, secret length: {len(sec)}", flush=True)
     j = http("POST", BASE + "/api/v1/oauth/generate_access_token",
              {"client_id": cid, "client_secret": sec})
     inner = j.get("data", {}) if isinstance(j, dict) else {}
@@ -114,80 +123,4 @@ def norm_price(v):
 
 def main():
     token = get_token()
-    print("Fetching forecourts...")
-    forecourts = fetch_all("/api/v1/pfs", token)
-    print("Fetching prices...")
-    prices = fetch_all("/api/v1/pfs/fuel-prices", token)
-
-    if INSPECT:
-        print("\n--- forecourt sample ---\n", json.dumps(forecourts[:1], indent=2)[:1500])
-        print("\n--- price sample ---\n", json.dumps(prices[:1], indent=2)[:1500])
-        return
-
-    by_id = {}
-    for r in forecourts:
-        loc = r.get("location") if isinstance(r.get("location"), dict) else r
-        la, lo = pick(loc, "latitude", "lat"), pick(loc, "longitude", "lng", "lon")
-        try:
-            la, lo = float(la), float(lo)
-        except (TypeError, ValueError):
-            continue
-        if not (49 < la < 61 and -9 < lo < 3):
-            continue
-        by_id[sid(r)] = {
-            "i": sid(r),
-            "n": pick(r, "trading_name", "name", "site_name") or "Petrol station",
-            "b": pick(r, "brand_name", "brand") or "",
-            "la": round(la, 5), "lo": round(lo, 5),
-            "pc": pick(loc, "postcode") or "",
-        }
-
-    for r in prices:
-        s = by_id.get(sid(r))
-        if not s:
-            continue
-        items = r.get("fuel_prices") if isinstance(r.get("fuel_prices"), list) else [r]
-        for it in items:
-            key = FUELS.get(str(pick(it, "fuel_type", "fuel") or "").upper())
-            price = norm_price(pick(it, "price", "price_per_litre"))
-            if key and price is not None:
-                s[key] = price
-                ts = pick(it, "price_change_effective_timestamp", "price_last_updated", "updated_at")
-                if ts and (not s.get("u") or str(ts) > s["u"]):
-                    s["u"] = str(ts)
-
-    stations = [s for s in by_id.values() if any(k in s for k in ("d", "p", "sd", "sp"))]
-    print(f"{len(by_id)} forecourts, {len(stations)} with prices")
-    if len(stations) < 1000:
-        sys.exit("Suspiciously few stations: not overwriting previous data.")
-
-    favs = []
-    cfg = json.load(open(os.path.join(ROOT, "config.json")))
-    for f in cfg["favourites"]:
-        brand = f.get("brand", "").lower()
-        pc = f.get("postcode", "").replace(" ", "").upper()
-        cands = [s for s in stations if brand in (s["b"] + " " + s["n"]).lower()]
-        hit = None
-        if pc:
-            hit = next((s for s in cands if s["pc"].replace(" ", "").upper() == pc), None)
-        if not hit and f.get("near"):
-            la, lo, r = f["near"]
-            near = sorted(((km(la, lo, s["la"], s["lo"]), s) for s in cands), key=lambda x: x[0])
-            if near and near[0][0] <= r:
-                hit = near[0][1]
-        if hit:
-            print(f"  MATCH {f['label']} -> {hit['n']} {hit['pc']}")
-            favs.append({"label": f["label"], "id": hit["i"]})
-        else:
-            print(f"  NO MATCH for {f['label']} - adjust config.json")
-            favs.append({"label": f["label"], "id": None})
-
-    os.makedirs(os.path.dirname(OUT), exist_ok=True)
-    with open(OUT, "w") as fh:
-        json.dump({"updated": datetime.datetime.now(datetime.timezone.utc).isoformat(timespec="seconds"),
-                   "favs": favs, "stations": stations}, fh, separators=(",", ":"))
-    print("Wrote", OUT)
-
-
-if __name__ == "__main__":
-    main()
+    print("Fetching
