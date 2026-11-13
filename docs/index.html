@@ -38,6 +38,10 @@ button.act{background:var(--accent);color:#fff;border:0;border-radius:99px;paddi
 .legend{font-size:.78rem;color:var(--mute);margin:8px 0}
 .legend i{display:inline-block;width:10px;height:10px;border-radius:50%;margin:0 4px 0 10px;vertical-align:middle}
 .small{color:var(--mute);font-size:.78rem;margin:14px 0 0}.pop b{font-size:1.1rem}
+.logo{position:relative;flex:none;width:52px;height:52px;border-radius:12px;display:flex;align-items:center;justify-content:center;font-weight:800;letter-spacing:-.02em;overflow:hidden;text-align:center;line-height:1.05}
+.logo img{position:absolute;inset:0;width:100%;height:100%;object-fit:contain;background:#fff;padding:5px}
+.dh{display:flex;align-items:center;gap:12px;margin-bottom:6px}.dh h2{margin:0}
+.row .info{flex:1;min-width:0}
 [hidden]{display:none!important}
 </style>
 </head>
@@ -57,15 +61,21 @@ button.act{background:var(--accent);color:#fff;border:0;border-radius:99px;paddi
 <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet.markercluster/1.5.3/leaflet.markercluster.min.js"></script>
 <script>
-var D=null,byId={},map=null;
+var D=null,byId={},map=null,me=null,meDot=null,meAcc=null;
 function esc(t){return String(t==null?"":t).replace(/[&<>"]/g,function(c){return{"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]})}
+var BR=[["tesco","TESCO","#00539f","#fff"],["sainsbury","Sainsbury’s","#f06c00","#fff"],["esso","ESSO","#0a3d91","#fff"],["shell","SHELL","#fbce07","#dd1d21"],["bp","BP","#009a44","#ffe600"],["asda","ASDA","#78be20","#fff"],["texaco","TEXACO","#e31837","#fff"],["jet","JET","#ffd800","#111"],["morrisons","MORRISONS","#00704a","#ffd100"],["gulf","GULF","#f58220","#00529b"],["murco","MURCO","#d71920","#fff"],["applegreen","APPLEGREEN","#6cb33f","#fff"]];
+function brand(s){var tests=[(s.b||"").toLowerCase(),(s.n||"").toLowerCase()];
+ for(var t=0;t<2;t++)for(var i=0;i<BR.length;i++){var k=BR[i][0];var hit=(k==="bp"||k==="jet")?new RegExp("\\b"+k+"\\b").test(tests[t]):tests[t].indexOf(k)>-1;if(hit)return BR[i]}
+ return["pump","⛽","#667085","#fff"]}
+function logo(s){var b=brand(s),fs=b[1].length>8?8:b[1].length>6?10:b[1].length>3?12:16;
+ return '<span class="logo" style="background:'+b[2]+';color:'+b[3]+';font-size:'+fs+'px">'+esc(b[1])+'<img src="logos/'+b[0]+'.png" alt="" onerror="this.remove()"></span>'}
 function fp(v){return v==null?"—":v.toFixed(1)+"p"}
 function ago(t){if(!t)return"";var m=Math.round((Date.now()-new Date(t))/60000);if(isNaN(m))return"";return m<60?m+" min ago":m<2880?Math.round(m/60)+" h ago":Math.round(m/1440)+" days ago"}
 fetch("data/stations.json?"+Date.now()).then(function(r){return r.json()}).then(init).catch(function(){document.getElementById("stamp").textContent="Couldn’t load price data."});
 function init(d){
  D=d;d.stations.forEach(function(s){byId[s.i]=s});
  if(!d.stations.length){document.getElementById("stamp").textContent="No data yet: run the “Refresh fuel prices” workflow in GitHub Actions.";return}
- document.getElementById("stamp").textContent="Wokingham · Sandhurst · Camberley · diesel first · data refreshed "+ago(d.updated);
+ document.getElementById("stamp").textContent="Wokingham · Winnersh · Sandhurst · Camberley · diesel first · data refreshed "+ago(d.updated);
  renderList();
 }
 function favs(){return D.favs.map(function(f){return{label:f.label,s:byId[f.id]}})}
@@ -74,7 +84,7 @@ function renderList(){
  var best=f.length&&f[0].s?f[0].s.d:null,h="";
  f.forEach(function(x){
   if(!x.s){h+='<div class="row" style="cursor:default"><div><div class="name">'+esc(x.label)+'</div><div class="where">Not found in the data: edit config.json</div></div></div>';return}
-  h+='<button class="row" data-id="'+esc(x.s.i)+'"><div><div class="name">'+esc(x.label)+(x.s.d!=null&&x.s.d===best?'<span class="badge">Cheapest</span>':'')+'</div><div class="where">'+esc(x.s.pc)+' · '+esc(ago(x.s.u))+'</div></div><div class="price"><div class="big">'+fp(x.s.d)+'</div><div class="lab">Diesel</div></div></button>';
+  h+='<button class="row" data-id="'+esc(x.s.i)+'">'+logo(x.s)+'<div class="info"><div class="name">'+esc(x.label)+(x.s.d!=null&&x.s.d===best?'<span class="badge">Cheapest</span>':'')+'</div><div class="where">'+esc(x.s.pc)+' · '+esc(ago(x.s.u))+'</div></div><div class="price"><div class="big">'+fp(x.s.d)+'</div><div class="lab">Diesel</div></div></button>';
  });
  document.getElementById("vList").innerHTML=h;
 }
@@ -83,7 +93,7 @@ function detail(id){
  var s=byId[id],el=document.getElementById("detail");
  var lab=(favs().filter(function(f){return f.s&&f.s.i===id})[0]||{}).label||s.n;
  el.hidden=false;
- el.innerHTML='<h2>'+esc(lab)+'</h2><div class="where">'+esc(s.n)+' · '+esc(s.pc)+' · updated '+esc(ago(s.u))+'</div>'
+ el.innerHTML='<div class="dh">'+logo(s)+'<h2>'+esc(lab)+'</h2></div><div class="where">'+esc(s.n)+' · '+esc(s.pc)+' · updated '+esc(ago(s.u))+'</div>'
  +'<div class="fuels"><div class="fuel d"><div class="lab">Diesel</div><div class="big">'+fp(s.d)+'</div></div>'
  +'<div class="fuel"><div class="lab">Petrol E10</div><div class="big">'+fp(s.p)+'</div></div>'
  +(s.sd!=null?'<div class="fuel"><div class="lab">Super diesel</div><div class="big">'+fp(s.sd)+'</div></div>':'')
@@ -98,7 +108,7 @@ function tab(m){
  if(m)document.getElementById("detail").hidden=true;
  document.getElementById("vMap").hidden=!m;
  document.getElementById("tList").setAttribute("aria-selected",!m);document.getElementById("tMap").setAttribute("aria-selected",m);
- if(m){buildMap();setTimeout(function(){map.invalidateSize()},50)}
+ if(m){buildMap();map.locate({watch:true,setView:false,maximumAge:30000});setTimeout(function(){map.invalidateSize()},50)}else if(map){map.stopLocate()}
 }
 document.getElementById("tList").onclick=function(){tab(false)};
 document.getElementById("tMap").onclick=function(){if(D&&D.stations.length)tab(true)};
@@ -132,9 +142,18 @@ function buildMap(){
   var ic=L.divIcon({className:"",html:'<div class="fp'+(f.s.d===best?' best':'')+'">★ '+(f.s.d==null?"—":f.s.d.toFixed(1))+'</div>',iconSize:[70,24],iconAnchor:[35,12]});
   L.marker([f.s.la,f.s.lo],{icon:ic,zIndexOffset:1000}).bindPopup(popup(f.s)).addTo(map);
  });
+ var pts=favs().filter(function(f){return f.s}).map(function(f){return[f.s.la,f.s.lo]});
+ if(pts.length)map.fitBounds(L.latLngBounds(pts),{padding:[40,40],maxZoom:13});
  var btn=L.control({position:"topleft"});
- btn.onAdd=function(){var b=L.DomUtil.create("button","act");b.textContent="📍 Near me";b.style.margin="10px";b.onclick=function(e){e.stopPropagation();map.locate({setView:true,maxZoom:14})};return b};
+ btn.onAdd=function(){var b=L.DomUtil.create("button","act");b.textContent="📍 Near me";b.style.margin="10px";b.onclick=function(e){e.stopPropagation();if(me){map.setView(me,14)}else{map.locate({setView:true,maxZoom:14})}};return b};
  btn.addTo(map);
+ map.on("locationfound",function(e){
+  me=e.latlng;
+  if(!meDot){
+   meAcc=L.circle(e.latlng,{radius:e.accuracy,color:"#1a73e8",weight:1,fillOpacity:.12,interactive:false}).addTo(map);
+   meDot=L.circleMarker(e.latlng,{radius:8,color:"#fff",weight:3,fillColor:"#1a73e8",fillOpacity:1,interactive:false}).addTo(map);
+  }else{meDot.setLatLng(e.latlng);meAcc.setLatLng(e.latlng).setRadius(e.accuracy)}
+ });
 }
 if("serviceWorker" in navigator){window.addEventListener("load",function(){navigator.serviceWorker.register("sw.js").catch(function(){})})}
 </script>
