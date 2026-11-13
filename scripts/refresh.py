@@ -123,4 +123,80 @@ def norm_price(v):
 
 def main():
     token = get_token()
-    print("Fetching
+    print("Fetching forecourts...")
+    forecourts = fetch_all("/api/v1/pfs", token)
+    print("Fetching prices...")
+    prices = fetch_all("/api/v1/pfs/fuel-prices", token)
+
+    if INSPECT:
+        print("\n--- forecourt sample ---\n", json.dumps(forecourts[:1], indent=2)[:1500])
+        print("\n--- price sample ---\n", json.dumps(prices[:1], indent=2)[:1500])
+        return
+
+    by_id = {}
+    for r in forecourts:
+        loc = r.get("location") if isinstance(r.get("location"), dict) else r
+        la, lo = pick(loc, "latitude", "lat"), pick(loc, "longitude", "lng", "lon")
+        try:
+            la, lo = float(la), float(lo)
+        except (TypeError, ValueError):
+            continue
+        if not (49 < la < 61 and -9 < lo < 3):
+            continue
+        by_id[sid(r)] = {
+            "i": sid(r),
+            "n": pick(r, "trading_name", "name", "site_name") or "Petrol station",
+            "b": pick(r, "brand_name", "brand") or "",
+            "la": round(la, 5), "lo": round(lo, 5),
+            "pc": pick(loc, "postcode") or "",
+        }
+
+    for r in prices:
+        s = by_id.get(sid(r))
+        if not s:
+            continue
+        items = r.get("fuel_prices") if isinstance(r.get("fuel_prices"), list) else [r]
+        for it in items:
+            key = FUELS.get(str(pick(it, "fuel_type", "fuel") or "").upper())
+            price = norm_price(pick(it, "price", "price_per_litre"))
+            if key and price is not None:
+                s[key] = price
+                ts = pick(it, "price_change_effective_timestamp", "price_last_updated", "updated_at")
+                if ts and (not s.get("u") or str(ts) > s["u"]):
+                    s["u"] = str(ts)
+
+    stations = [s for s in by_id.values() if any(k in s for k in ("d", "p", "sd", "sp"))]
+    print(f"{len(by_id)} forecourts, {len(stations)} with prices")
+    if len(stations) < 1000:
+        sys.exit("Suspiciously few stations: not overwriting previous data.")
+
+    favs = []
+    cfg = json.load(open(os.path.join(ROOT, "config.json")))
+    for f in cfg["favourites"]:
+        brand = f.get("brand", "").lower()
+        pc = f.get("postcode", "").replace(" ", "").upper()
+        cands = [s for s in stations if brand in (s["b"] + " " + s["n"]).lower()]
+        hit = None
+        if pc:
+            hit = next((s for s in cands if s["pc"].replace(" ", "").upper() == pc), None)
+        if not hit and f.get("near"):
+            la, lo, r = f["near"]
+            near = sorted(((km(la, lo, s["la"], s["lo"]), s) for s in cands), key=lambda x: x[0])
+            if near and near[0][0] <= r:
+                hit = near[0][1]
+        if hit:
+            print(f"  MATCH {f['label']} -> {hit['n']} {hit['pc']}")
+            favs.append({"label": f["label"], "id": hit["i"]})
+        else:
+            print(f"  NO MATCH for {f['label']} - adjust config.json")
+            favs.append({"label": f["label"], "id": None})
+
+    os.makedirs(os.path.dirname(OUT), exist_ok=True)
+    with open(OUT, "w") as fh:
+        json.dump({"updated": datetime.datetime.now(datetime.timezone.utc).isoformat(timespec="seconds"),
+                   "favs": favs, "stations": stations}, fh, separators=(",", ":"))
+    print("Wrote", OUT)
+
+
+if __name__ == "__main__":
+    main()
