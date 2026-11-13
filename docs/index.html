@@ -1,0 +1,137 @@
+<!DOCTYPE html>
+<html lang="en-GB">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>My Local Fuel Prices</title>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet.markercluster/1.5.3/MarkerCluster.min.css">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet.markercluster/1.5.3/MarkerCluster.Default.min.css">
+<style>
+:root{--bg:#f5f6f8;--card:#fff;--text:#1a1d23;--mute:#667085;--line:#e3e6ea;--accent:#0b6bcb;--good:#12804a;--goodbg:#e3f5ea}
+@media (prefers-color-scheme:dark){:root{--bg:#111418;--card:#1b1f26;--text:#eef0f3;--mute:#98a2b3;--line:#2c323b;--accent:#5aa9ff;--good:#4ade80;--goodbg:#12301f}}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--text);font:16px/1.4 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;padding-top:env(safe-area-inset-top,0)}
+main{max-width:900px;margin:0 auto;padding:16px}
+h1{font-size:1.4rem;margin:4px 0 2px}.sub{color:var(--mute);font-size:.85rem;margin:0 0 12px}
+.tabs{display:flex;gap:6px;background:var(--line);padding:4px;border-radius:12px;margin-bottom:14px}
+.tabs button{flex:1;border:0;background:none;color:var(--mute);font:inherit;font-weight:600;padding:9px;border-radius:9px;cursor:pointer}
+.tabs button[aria-selected=true]{background:var(--card);color:var(--text);box-shadow:0 1px 3px rgba(0,0,0,.15)}
+.row{display:flex;align-items:center;justify-content:space-between;gap:12px;width:100%;background:var(--card);border:1px solid var(--line);border-radius:14px;padding:14px;margin-bottom:10px;color:inherit;font:inherit;text-align:left;cursor:pointer}
+.row:hover{border-color:var(--accent)}
+.name{font-weight:650}.where{color:var(--mute);font-size:.82rem}
+.price{text-align:right;white-space:nowrap}.big{font-size:1.5rem;font-weight:750;font-variant-numeric:tabular-nums}
+.lab{font-size:.72rem;color:var(--mute);text-transform:uppercase;letter-spacing:.04em}
+.badge{background:var(--goodbg);color:var(--good);font-size:.7rem;font-weight:700;padding:2px 8px;border-radius:99px;margin-left:6px}
+.panel{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:16px;margin-top:12px}
+.panel h2{margin:0 0 2px;font-size:1.1rem}.fuels{display:grid;grid-template-columns:repeat(2,1fr);gap:10px;margin:12px 0}
+.fuel{border:1px solid var(--line);border-radius:12px;padding:10px}.fuel.d{border-color:var(--accent)}
+.fuel .big{font-size:1.6rem}
+button.act{background:var(--accent);color:#fff;border:0;border-radius:99px;padding:8px 14px;font:inherit;font-weight:600;cursor:pointer}
+#map{height:calc(100vh - 230px);min-height:420px;border-radius:14px;border:1px solid var(--line)}
+.fp{background:var(--card);color:var(--text);border:2px solid var(--accent);border-radius:8px;font-weight:800;font-size:13px;padding:2px 6px;white-space:nowrap;text-align:center;box-shadow:0 1px 4px rgba(0,0,0,.35)}
+.fp.best{background:var(--good);color:#fff;border-color:var(--good)}
+.legend{font-size:.78rem;color:var(--mute);margin:8px 0}
+.legend i{display:inline-block;width:10px;height:10px;border-radius:50%;margin:0 4px 0 10px;vertical-align:middle}
+.small{color:var(--mute);font-size:.78rem;margin:14px 0 0}.pop b{font-size:1.1rem}
+[hidden]{display:none!important}
+</style>
+</head>
+<body>
+<main>
+<h1>⛽ My Local Fuel Prices</h1>
+<p class="sub" id="stamp">Loading…</p>
+<div class="tabs" role="tablist"><button id="tList" role="tab" aria-selected="true">My stations</button><button id="tMap" role="tab" aria-selected="false">UK map</button></div>
+<section id="vList"></section>
+<section id="detail" class="panel" hidden></section>
+<section id="vMap" hidden>
+ <div id="map"></div>
+ <div class="legend">Diesel: <i style="background:#16a34a"></i>cheap<i style="background:#f59e0b"></i>average<i style="background:#dc2626"></i>expensive · ★ = my stations</div>
+</section>
+<p class="small">Prices from the UK Government Fuel Finder scheme. Contains public sector information licensed under the Open Government Licence v3.0. Always check the pump price before filling up.</p>
+</main>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet.markercluster/1.5.3/leaflet.markercluster.min.js"></script>
+<script>
+var D=null,byId={},map=null;
+function esc(t){return String(t==null?"":t).replace(/[&<>"]/g,function(c){return{"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]})}
+function fp(v){return v==null?"—":v.toFixed(1)+"p"}
+function ago(t){if(!t)return"";var m=Math.round((Date.now()-new Date(t))/60000);if(isNaN(m))return"";return m<60?m+" min ago":m<2880?Math.round(m/60)+" h ago":Math.round(m/1440)+" days ago"}
+fetch("data/stations.json?"+Date.now()).then(function(r){return r.json()}).then(init).catch(function(){document.getElementById("stamp").textContent="Couldn’t load price data."});
+function init(d){
+ D=d;d.stations.forEach(function(s){byId[s.i]=s});
+ if(!d.stations.length){document.getElementById("stamp").textContent="No data yet: run the “Refresh fuel prices” workflow in GitHub Actions.";return}
+ document.getElementById("stamp").textContent="Wokingham · Sandhurst · Camberley · diesel first · data refreshed "+ago(d.updated);
+ renderList();
+}
+function favs(){return D.favs.map(function(f){return{label:f.label,s:byId[f.id]}})}
+function renderList(){
+ var f=favs().sort(function(a,b){var x=a.s&&a.s.d!=null?a.s.d:1e9,y=b.s&&b.s.d!=null?b.s.d:1e9;return x-y});
+ var best=f.length&&f[0].s?f[0].s.d:null,h="";
+ f.forEach(function(x){
+  if(!x.s){h+='<div class="row" style="cursor:default"><div><div class="name">'+esc(x.label)+'</div><div class="where">Not found in the data: edit config.json</div></div></div>';return}
+  h+='<button class="row" data-id="'+esc(x.s.i)+'"><div><div class="name">'+esc(x.label)+(x.s.d!=null&&x.s.d===best?'<span class="badge">Cheapest</span>':'')+'</div><div class="where">'+esc(x.s.pc)+' · '+esc(ago(x.s.u))+'</div></div><div class="price"><div class="big">'+fp(x.s.d)+'</div><div class="lab">Diesel</div></div></button>';
+ });
+ document.getElementById("vList").innerHTML=h;
+}
+document.getElementById("vList").addEventListener("click",function(e){var b=e.target.closest("[data-id]");if(b)detail(b.dataset.id)});
+function detail(id){
+ var s=byId[id],el=document.getElementById("detail");
+ var lab=(favs().filter(function(f){return f.s&&f.s.i===id})[0]||{}).label||s.n;
+ el.hidden=false;
+ el.innerHTML='<h2>'+esc(lab)+'</h2><div class="where">'+esc(s.n)+' · '+esc(s.pc)+' · updated '+esc(ago(s.u))+'</div>'
+ +'<div class="fuels"><div class="fuel d"><div class="lab">Diesel</div><div class="big">'+fp(s.d)+'</div></div>'
+ +'<div class="fuel"><div class="lab">Petrol E10</div><div class="big">'+fp(s.p)+'</div></div>'
+ +(s.sd!=null?'<div class="fuel"><div class="lab">Super diesel</div><div class="big">'+fp(s.sd)+'</div></div>':'')
+ +(s.sp!=null?'<div class="fuel"><div class="lab">Super unleaded</div><div class="big">'+fp(s.sp)+'</div></div>':'')+'</div>'
+ +'<button class="act" id="show">Show on map</button> <button class="act" id="hide" style="background:var(--mute)">Close</button>';
+ document.getElementById("show").onclick=function(){tab(true);map.setView([s.la,s.lo],15)};
+ document.getElementById("hide").onclick=function(){el.hidden=true};
+ el.scrollIntoView({behavior:"smooth",block:"nearest"});
+}
+function tab(m){
+ document.getElementById("vList").hidden=m;
+ if(m)document.getElementById("detail").hidden=true;
+ document.getElementById("vMap").hidden=!m;
+ document.getElementById("tList").setAttribute("aria-selected",!m);document.getElementById("tMap").setAttribute("aria-selected",m);
+ if(m){buildMap();setTimeout(function(){map.invalidateSize()},50)}
+}
+document.getElementById("tList").onclick=function(){tab(false)};
+document.getElementById("tMap").onclick=function(){if(D&&D.stations.length)tab(true)};
+function popup(s){
+ return '<div class="pop"><b>'+esc(s.n)+'</b><br><span class="where">'+esc(s.pc)+'</span><br>'
+ +'Diesel <b>'+fp(s.d)+'</b><br>Petrol E10 '+fp(s.p)
+ +(s.sd!=null?'<br>Super diesel '+fp(s.sd):'')+(s.sp!=null?'<br>Super unleaded '+fp(s.sp):'')
+ +'<br><span class="where">Updated '+esc(ago(s.u))+'</span></div>';
+}
+function buildMap(){
+ if(map)return;
+ map=L.map("map",{preferCanvas:true}).setView([51.375,-0.79],11);
+ L.tileLayer("https://tile.openstreetmap.org/{z}/{x}/{y}.png",{maxZoom:19,attribution:"&copy; OpenStreetMap contributors"}).addTo(map);
+ var ds=D.stations.map(function(s){return s.d}).filter(function(v){return v!=null}).sort(function(a,b){return a-b});
+ var lo=ds[Math.floor(ds.length*.33)],hi=ds[Math.floor(ds.length*.66)];
+ var cl=L.markerClusterGroup({disableClusteringAtZoom:13,maxClusterRadius:55,chunkedLoading:true});
+ var favIds={};D.favs.forEach(function(f){if(f.id)favIds[f.id]=1});
+ D.stations.forEach(function(s){
+  if(favIds[s.i])return;
+  var c=s.d==null?"#94a3b8":s.d<=lo?"#16a34a":s.d<=hi?"#f59e0b":"#dc2626";
+  var m=L.circleMarker([s.la,s.lo],{radius:7,color:"#fff",weight:1.5,fillColor:c,fillOpacity:.95});
+  m.bindPopup(function(){return popup(s)});
+  m.bindTooltip(fp(s.d),{direction:"top",offset:[0,-6]});
+  cl.addLayer(m);
+ });
+ map.addLayer(cl);
+ var fv=favs().filter(function(f){return f.s&&f.s.d!=null}).map(function(f){return f.s.d});
+ var best=fv.length?Math.min.apply(null,fv):null;
+ favs().forEach(function(f){
+  if(!f.s)return;
+  var ic=L.divIcon({className:"",html:'<div class="fp'+(f.s.d===best?' best':'')+'">★ '+(f.s.d==null?"—":f.s.d.toFixed(1))+'</div>',iconSize:[70,24],iconAnchor:[35,12]});
+  L.marker([f.s.la,f.s.lo],{icon:ic,zIndexOffset:1000}).bindPopup(popup(f.s)).addTo(map);
+ });
+ var btn=L.control({position:"topleft"});
+ btn.onAdd=function(){var b=L.DomUtil.create("button","act");b.textContent="📍 Near me";b.style.margin="10px";b.onclick=function(e){e.stopPropagation();map.locate({setView:true,maxZoom:14})};return b};
+ btn.addTo(map);
+}
+</script>
+</body>
+</html>
