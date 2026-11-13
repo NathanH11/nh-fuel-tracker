@@ -24,6 +24,7 @@ jobs:
         env:
           FF_CLIENT_ID: ${{ secrets.FF_CLIENT_ID }}
           FF_CLIENT_SECRET: ${{ secrets.FF_CLIENT_SECRET }}
+          FF_BASE_URL: ${{ secrets.FF_BASE_URL }}
         run: python scripts/refresh.py
       - uses: actions/upload-pages-artifact@v3
         with:
