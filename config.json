@@ -1,8 +1,11 @@
 {
   "favourites": [
     { "label": "Tesco Wokingham",  "brand": "tesco", "postcode": "RG40 2NS", "near": [51.4003, -0.8432, 1.5] },
+    { "label": "Shell Little Waitrose (Winnersh)", "postcode": "RG41 1HB", "near": [51.4366, -0.8845, 2.0] },
+    { "label": "BP Triangle SF Connect (Winnersh)", "postcode": "RG41 5AB", "near": [51.4366, -0.8845, 2.0] },
     { "label": "Esso Sandhurst",   "brand": "esso",  "postcode": "GU47 9BH", "near": [51.3480, -0.7960, 2.0] },
-    { "label": "Tesco Camberley (Meadows)",       "brand": "tesco",     "near": [51.3355, -0.7460, 2.5] },
-    { "label": "Sainsbury's Camberley (Meadows)", "brand": "sainsbury", "near": [51.3355, -0.7460, 2.5] }
+    { "label": "Tesco Camberley (Meadows)",       "brand": "tesco",     "near": [51.3355, -0.7460, 4.0] },
+    { "label": "Sainsbury's Camberley (Meadows)", "brand": "sainsbury", "postcode": "GU15 3YN", "near": [51.3355, -0.7460, 4.0] },
+    { "label": "Esso Frimley Road (Camberley)", "postcode": "GU15 2QL", "near": [51.3350, -0.7400, 2.0] }
   ]
 }
