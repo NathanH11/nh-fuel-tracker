@@ -8,7 +8,7 @@ Usage:
 """
 import os, sys, json, time, math, datetime, urllib.request, urllib.error
 
-BASE = "https://www.fuel-finder.service.gov.uk"
+BASE = (os.environ.get("FF_BASE_URL") or "https://www.fuel-finder.service.gov.uk").rstrip("/")
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 OUT = os.path.join(ROOT, "docs", "data", "stations.json")
 INSPECT = "--inspect" in sys.argv
