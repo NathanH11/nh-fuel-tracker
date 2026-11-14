@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>My Local Fuel Prices</title>
 <link rel="manifest" href="manifest.webmanifest">
-<meta name="theme-color" content="#0b6bcb">
+<meta name="theme-color" content="#d4008c">
 <link rel="icon" href="icon-192.png">
 <link rel="apple-touch-icon" href="icon-192.png">
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css">
@@ -17,137 +17,225 @@
 *{box-sizing:border-box}
 body{margin:0;background:var(--bg);color:var(--text);font:16px/1.4 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;padding-top:env(safe-area-inset-top,0)}
 main{max-width:900px;margin:0 auto;padding:16px}
+header{display:flex;justify-content:space-between;align-items:flex-start;gap:8px}
 h1{font-size:1.4rem;margin:4px 0 2px}.sub{color:var(--mute);font-size:.85rem;margin:0 0 12px}
+#gear{background:var(--card);border:1px solid var(--line);border-radius:12px;font-size:1.2rem;padding:6px 10px;cursor:pointer;color:var(--text)}
 .tabs{display:flex;gap:6px;background:var(--line);padding:4px;border-radius:12px;margin-bottom:14px}
-.tabs button{flex:1;border:0;background:none;color:var(--mute);font:inherit;font-weight:600;padding:9px;border-radius:9px;cursor:pointer}
+.tabs button{flex:1;border:0;background:none;color:var(--mute);font:inherit;font-weight:600;font-size:.9rem;padding:9px 4px;border-radius:9px;cursor:pointer}
 .tabs button[aria-selected=true]{background:var(--card);color:var(--text);box-shadow:0 1px 3px rgba(0,0,0,.15)}
-.row{display:flex;align-items:center;justify-content:space-between;gap:12px;width:100%;background:var(--card);border:1px solid var(--line);border-radius:14px;padding:14px;margin-bottom:10px;color:inherit;font:inherit;text-align:left;cursor:pointer}
-.row:hover{border-color:var(--accent)}
+.row{display:flex;align-items:center;justify-content:space-between;gap:12px;width:100%;background:var(--card);border:1px solid var(--line);border-radius:14px;padding:12px;margin-bottom:10px;color:inherit;font:inherit;text-align:left;cursor:pointer}
+.row:hover{border-color:var(--accent)}.row .info{flex:1;min-width:0}
 .name{font-weight:650}.where{color:var(--mute);font-size:.82rem}
 .price{text-align:right;white-space:nowrap}.big{font-size:1.5rem;font-weight:750;font-variant-numeric:tabular-nums}
-.lab{font-size:.72rem;color:var(--mute);text-transform:uppercase;letter-spacing:.04em}
+.lab{font-size:.72rem;color:var(--mute);text-transform:uppercase;letter-spacing:.04em}.tank{font-size:.74rem;color:var(--mute)}
 .badge{background:var(--goodbg);color:var(--good);font-size:.7rem;font-weight:700;padding:2px 8px;border-radius:99px;margin-left:6px}
-.panel{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:16px;margin-top:12px}
-.panel h2{margin:0 0 2px;font-size:1.1rem}.fuels{display:grid;grid-template-columns:repeat(2,1fr);gap:10px;margin:12px 0}
-.fuel{border:1px solid var(--line);border-radius:12px;padding:10px}.fuel.d{border-color:var(--accent)}
-.fuel .big{font-size:1.6rem}
-button.act{background:var(--accent);color:#fff;border:0;border-radius:99px;padding:8px 14px;font:inherit;font-weight:600;cursor:pointer}
-#map{height:calc(100vh - 230px);min-height:420px;border-radius:14px;border:1px solid var(--line)}
-.fp{background:var(--card);color:var(--text);border:2px solid var(--accent);border-radius:8px;font-weight:800;font-size:13px;padding:2px 6px;white-space:nowrap;text-align:center;box-shadow:0 1px 4px rgba(0,0,0,.35)}
-.fp.best{background:var(--good);color:#fff;border-color:var(--good)}
-.legend{font-size:.78rem;color:var(--mute);margin:8px 0}
-.legend i{display:inline-block;width:10px;height:10px;border-radius:50%;margin:0 4px 0 10px;vertical-align:middle}
-.small{color:var(--mute);font-size:.78rem;margin:14px 0 0}.pop b{font-size:1.1rem}
 .logo{position:relative;flex:none;width:52px;height:52px;border-radius:12px;display:flex;align-items:center;justify-content:center;font-weight:800;letter-spacing:-.02em;overflow:hidden;text-align:center;line-height:1.05}
 .logo img{position:absolute;inset:0;width:100%;height:100%;object-fit:contain;background:#fff;padding:5px}
-.dh{display:flex;align-items:center;gap:12px;margin-bottom:6px}.dh h2{margin:0}
-.row .info{flex:1;min-width:0}
+.empty{background:var(--card);border:1px dashed var(--line);border-radius:14px;padding:18px;color:var(--mute);text-align:center}
+.act{display:inline-block;background:var(--accent);color:#fff;border:0;border-radius:99px;padding:9px 15px;font:inherit;font-weight:600;font-size:.9rem;cursor:pointer;text-decoration:none}
+.act.mute{background:var(--mute)}.acts{display:flex;flex-wrap:wrap;gap:8px;margin-top:12px}
+#sheet{position:fixed;inset:0;z-index:2000;display:flex;align-items:flex-end;justify-content:center;background:rgba(0,0,0,.45)}
+#sheet .card{background:var(--card);width:100%;max-width:600px;border-radius:18px 18px 0 0;padding:16px;padding-bottom:calc(16px + env(safe-area-inset-bottom,0px));max-height:88vh;overflow:auto}
+.card h2{margin:0 0 4px;font-size:1.15rem}.dh{display:flex;align-items:center;gap:12px;margin-bottom:6px}.dh h2{margin:0}
+.fuels{display:grid;grid-template-columns:repeat(2,1fr);gap:10px;margin:12px 0}
+.fuel{border:1px solid var(--line);border-radius:12px;padding:10px}.fuel.d{border-color:var(--accent);border-width:2px}.fuel .big{font-size:1.6rem}
+.fld{display:block;margin:12px 0;font-size:.85rem;color:var(--mute)}
+.fld select,.fld input{display:block;width:100%;margin-top:4px;font:inherit;font-size:1rem;padding:10px;border-radius:10px;border:1px solid var(--line);background:var(--bg);color:var(--text)}
+#map{height:calc(100vh - 250px);min-height:420px;border-radius:14px;border:1px solid var(--line)}
+.fp{border:2px solid #fff;border-radius:8px;font-weight:800;font-size:13px;padding:2px 6px;white-space:nowrap;text-align:center;box-shadow:0 1px 4px rgba(0,0,0,.4)}
+.fp.gold{border:3px solid #ffd400;box-shadow:0 0 0 2px #111,0 0 12px 3px #ffd400}
+.legend{font-size:.78rem;color:var(--mute);margin:8px 0}
+.legend i{display:inline-block;width:10px;height:10px;border-radius:50%;margin:0 4px 0 10px;vertical-align:middle}
+.small{color:var(--mute);font-size:.78rem;margin:10px 0 0}.pop b{font-size:1.1rem}.pop .act{margin-top:8px}
 [hidden]{display:none!important}
 </style>
 </head>
 <body>
 <main>
-<h1>⛽ My Local Fuel Prices</h1>
-<p class="sub" id="stamp">Loading…</p>
-<div class="tabs" role="tablist"><button id="tList" role="tab" aria-selected="true">My stations</button><button id="tMap" role="tab" aria-selected="false">UK map</button></div>
-<section id="vList"></section>
-<section id="detail" class="panel" hidden></section>
-<section id="vMap" hidden>
- <div id="map"></div>
- <div class="legend">Diesel: <i style="background:#16a34a"></i>cheap<i style="background:#f59e0b"></i>average<i style="background:#dc2626"></i>expensive · ★ = my stations</div>
+<header><div><h1>⛽ My Local Fuel Prices</h1><p class="sub" id="stamp">Loading…</p></div><button id="gear" aria-label="Settings">⚙️</button></header>
+<div class="tabs" role="tablist">
+<button id="t-list" data-v="list" role="tab" aria-selected="true">My stations</button>
+<button id="t-near" data-v="near" role="tab" aria-selected="false">Nearby</button>
+<button id="t-map" data-v="map" role="tab" aria-selected="false">UK map</button>
+</div>
+<section id="v-list"></section>
+<section id="v-near" hidden></section>
+<section id="v-map" hidden>
+<div id="map"></div>
+<div class="legend">Price: <i style="background:#16a34a"></i>cheap<i style="background:#f59e0b"></i>average<i style="background:#dc2626"></i>expensive · ★ box = my stations · gold outline = cheapest of mine</div>
 </section>
 <p class="small">Prices from the UK Government Fuel Finder scheme. Contains public sector information licensed under the Open Government Licence v3.0. Always check the pump price before filling up.</p>
 </main>
+<div id="sheet" hidden></div>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet.markercluster/1.5.3/leaflet.markercluster.min.js"></script>
 <script>
-var D=null,byId={},map=null,me=null,meDot=null,meAcc=null;
-function esc(t){return String(t==null?"":t).replace(/[&<>"]/g,function(c){return{"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]})}
-var BR=[["tesco","TESCO","#00539f","#fff"],["sainsbury","Sainsbury’s","#f06c00","#fff"],["esso","ESSO","#0a3d91","#fff"],["shell","SHELL","#fbce07","#dd1d21"],["bp","BP","#009a44","#ffe600"],["asda","ASDA","#78be20","#fff"],["texaco","TEXACO","#e31837","#fff"],["jet","JET","#ffd800","#111"],["morrisons","MORRISONS","#00704a","#ffd100"],["gulf","GULF","#f58220","#00529b"],["murco","MURCO","#d71920","#fff"],["applegreen","APPLEGREEN","#6cb33f","#fff"]];
-function brand(s){var tests=[(s.b||"").toLowerCase(),(s.n||"").toLowerCase()];
- for(var t=0;t<2;t++)for(var i=0;i<BR.length;i++){var k=BR[i][0];var hit=(k==="bp"||k==="jet")?new RegExp("\\b"+k+"\\b").test(tests[t]):tests[t].indexOf(k)>-1;if(hit)return BR[i]}
+// New visitors start with the stations in config.json. Set to false to start everyone with an empty list.
+const START_WITH_OWNER_LIST=true;
+const FUELS=[["d","Diesel"],["p","Petrol (E10)"],["sp","Super unleaded"],["sd","Super diesel"]];
+const FN=Object.fromEntries(FUELS);
+const $=id=>document.getElementById(id);
+const esc=t=>String(t==null?"":t).replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
+const store={get(k,d){try{const v=localStorage.getItem(k);return v==null?d:JSON.parse(v)}catch(e){return d}},set(k,v){try{localStorage.setItem(k,JSON.stringify(v))}catch(e){}},del(k){try{localStorage.removeItem(k)}catch(e){}}};
+let D=null,byId={},map=null,cl=null,favLayer=null,me=null,meDot=null,meAcc=null,loc=null,thr={},view="list",nShow=40;
+let S=Object.assign({fuel:"d",radius:15,car:"",tank:null},store.get("fuel-settings-v1",{}));
+let FAV=store.get("fuel-favs-v1",null);
+
+const fp=v=>v==null?"—":v.toFixed(1)+"p";
+const gbp=v=>"£"+v.toFixed(2);
+function ago(t){if(!t)return"";const m=Math.round((Date.now()-new Date(t))/60000);if(isNaN(m))return"";return m<60?m+" min ago":m<2880?Math.round(m/60)+" h ago":Math.round(m/1440)+" days ago"}
+function km(a,b,c,d){const p=Math.PI/180,x=Math.sin((c-a)*p/2)**2+Math.cos(a*p)*Math.cos(c*p)*Math.sin((d-b)*p/2)**2;return 12742*Math.asin(Math.sqrt(x))}
+
+const BR=[["tesco","TESCO","#00539f","#fff"],["sainsbury","Sainsbury’s","#f06c00","#fff"],["esso","ESSO","#0a3d91","#fff"],["shell","SHELL","#fbce07","#dd1d21"],["bp","BP","#009a44","#ffe600"],["asda","ASDA","#78be20","#fff"],["texaco","TEXACO","#e31837","#fff"],["jet","JET","#ffd800","#111"],["morrisons","MORRISONS","#00704a","#ffd100"],["gulf","GULF","#f58220","#00529b"],["murco","MURCO","#d71920","#fff"],["applegreen","APPLEGREEN","#6cb33f","#fff"]];
+function brand(s){const tests=[(s.b||"").toLowerCase(),(s.n||"").toLowerCase()];
+ for(const t of tests)for(const b of BR){const hit=(b[0]==="bp"||b[0]==="jet")?new RegExp("\\b"+b[0]+"\\b").test(t):t.includes(b[0]);if(hit)return b}
  return["pump","⛽","#667085","#fff"]}
-function logo(s){var b=brand(s),fs=b[1].length>8?8:b[1].length>6?10:b[1].length>3?12:16;
- return '<span class="logo" style="background:'+b[2]+';color:'+b[3]+';font-size:'+fs+'px">'+esc(b[1])+'<img src="logos/'+b[0]+'.png" alt="" onerror="this.remove()"></span>'}
-function fp(v){return v==null?"—":v.toFixed(1)+"p"}
-function ago(t){if(!t)return"";var m=Math.round((Date.now()-new Date(t))/60000);if(isNaN(m))return"";return m<60?m+" min ago":m<2880?Math.round(m/60)+" h ago":Math.round(m/1440)+" days ago"}
-fetch("data/stations.json?"+Date.now()).then(function(r){return r.json()}).then(init).catch(function(){document.getElementById("stamp").textContent="Couldn’t load price data."});
+function logo(s){const b=brand(s),fs=b[1].length>8?8:b[1].length>6?10:b[1].length>3?12:16;
+ return `<span class="logo" style="background:${b[2]};color:${b[3]};font-size:${fs}px">${esc(b[1])}<img src="logos/${b[0]}.png" alt="" onerror="this.remove()"></span>`}
+
+// favourites (per device) and settings
+const favIds=()=>FAV||(START_WITH_OWNER_LIST?D.favs.map(f=>f.id).filter(x=>x!=null).map(String):[]);
+const isFav=id=>favIds().includes(String(id));
+function toggleFav(id){id=String(id);const a=favIds().slice(),i=a.indexOf(id);if(i>-1)a.splice(i,1);else a.push(id);FAV=a;store.set("fuel-favs-v1",a)}
+function label(s){const f=D.favs.find(f=>f.id!=null&&String(f.id)===String(s.i));return f?f.label:s.n}
+const saveS=()=>store.set("fuel-settings-v1",S);
+const tankCost=(s,k=S.fuel)=>(S.tank&&s[k]!=null)?S.tank*s[k]/100:null;
+function colour(s){const v=s[S.fuel],t=thr[S.fuel];if(v==null||!t)return["#94a3b8","#fff"];return v<=t[0]?["#16a34a","#fff"]:v<=t[1]?["#f59e0b","#1a1d23"]:["#dc2626","#fff"]}
+const starText=id=>isFav(id)?"★ Remove from my stations":"☆ Add to my stations";
+const starBtn=id=>`<button class="act star" data-id="${esc(id)}">${starText(id)}</button>`;
+
+fetch("data/stations.json?"+Date.now()).then(r=>r.json()).then(init).catch(()=>{$("stamp").textContent="Couldn’t load price data."});
 function init(d){
- D=d;d.stations.forEach(function(s){byId[s.i]=s});
- if(!d.stations.length){document.getElementById("stamp").textContent="No data yet: run the “Refresh fuel prices” workflow in GitHub Actions.";return}
- document.getElementById("stamp").textContent="Wokingham · Winnersh · Sandhurst · Camberley · diesel first · data refreshed "+ago(d.updated);
- renderList();
+ D=d;d.stations.forEach(s=>byId[String(s.i)]=s);
+ if(!d.stations.length){$("stamp").textContent="No data yet: run the “Refresh fuel prices” workflow in GitHub Actions.";return}
+ for(const [k] of FUELS){const a=d.stations.map(s=>s[k]).filter(v=>v!=null).sort((x,y)=>x-y);if(a.length)thr[k]=[a[Math.floor(a.length*.33)],a[Math.floor(a.length*.66)]]}
+ stamp();renderFavs();
 }
-function favs(){return D.favs.map(function(f){return{label:f.label,s:byId[f.id]}})}
-function renderList(){
- var f=favs().sort(function(a,b){var x=a.s&&a.s.d!=null?a.s.d:1e9,y=b.s&&b.s.d!=null?b.s.d:1e9;return x-y});
- var best=f.length&&f[0].s?f[0].s.d:null,h="";
- f.forEach(function(x){
-  if(!x.s){h+='<div class="row" style="cursor:default"><div><div class="name">'+esc(x.label)+'</div><div class="where">Not found in the data: edit config.json</div></div></div>';return}
-  h+='<button class="row" data-id="'+esc(x.s.i)+'">'+logo(x.s)+'<div class="info"><div class="name">'+esc(x.label)+(x.s.d!=null&&x.s.d===best?'<span class="badge">Cheapest</span>':'')+'</div><div class="where">'+esc(x.s.pc)+' · '+esc(ago(x.s.u))+'</div></div><div class="price"><div class="big">'+fp(x.s.d)+'</div><div class="lab">Diesel</div></div></button>';
- });
- document.getElementById("vList").innerHTML=h;
+const stamp=()=>{$("stamp").textContent=`${FN[S.fuel]} first · data refreshed ${ago(D.updated)}`};
+
+function row(s,sub,best){const v=s[S.fuel],tc=tankCost(s);
+ return `<button class="row" data-id="${esc(s.i)}">${logo(s)}<div class="info"><div class="name">${isFav(s.i)?"★ ":""}${esc(label(s))}${best?'<span class="badge">Cheapest</span>':""}</div><div class="where">${esc(sub)}</div></div><div class="price"><div class="big">${fp(v)}</div><div class="lab">${esc(FN[S.fuel])}</div>${tc!=null?`<div class="tank">${gbp(tc)} / tank</div>`:""}</div></button>`}
+
+function renderFavs(){
+ const k=S.fuel,list=favIds().map(i=>byId[i]).filter(Boolean).sort((a,b)=>((a[k]==null)-(b[k]==null))||(a[k]-b[k])||0);
+ const best=list.length&&list[0][k]!=null?list[0][k]:null;
+ $("v-list").innerHTML=list.length?list.map(s=>row(s,`${s.pc} · ${ago(s.u)}`,s[k]!=null&&s[k]===best)).join(""):'<div class="empty">No stations yet. Open the <b>UK map</b> or <b>Nearby</b>, tap a station and press ☆ to add it.</div>';
 }
-document.getElementById("vList").addEventListener("click",function(e){var b=e.target.closest("[data-id]");if(b)detail(b.dataset.id)});
+
+function getLoc(force){
+ const el=$("v-near");
+ if(!navigator.geolocation){el.innerHTML='<div class="empty">Location isn’t available on this device.</div>';return}
+ if(loc&&!force&&Date.now()-loc.t<120000){renderNearby();return}
+ el.innerHTML='<div class="empty">Finding your location…</div>';
+ navigator.geolocation.getCurrentPosition(p=>{loc={lat:p.coords.latitude,lon:p.coords.longitude,t:Date.now()};nShow=40;renderNearby()},
+  ()=>{el.innerHTML='<div class="empty">Couldn’t get your location. Allow location for this site, then<br><br><button class="act" id="retry">Try again</button></div>'},
+  {enableHighAccuracy:false,timeout:15000,maximumAge:60000});
+}
+function renderNearby(){
+ const k=S.fuel,r=S.radius*1.609344,arr=[];
+ for(const s of D.stations){if(s[k]==null)continue;const d=km(loc.lat,loc.lon,s.la,s.lo);if(d<=r)arr.push([d,s])}
+ arr.sort((a,b)=>(a[1][k]-b[1][k])||(a[0]-b[0]));
+ let h=`<p class="small" style="margin:0 0 10px">${arr.length} stations with ${esc(FN[k])} within ${S.radius} miles, cheapest first</p>`;
+ arr.slice(0,nShow).forEach(([d,s],i)=>{h+=row(s,`${(d/1.609344).toFixed(1)} mi · ${s.pc}`,i===0)});
+ if(arr.length>nShow)h+='<button class="act" id="more">Show more</button>';
+ if(!arr.length)h+='<div class="empty">Nothing found in this radius. Try a bigger radius in settings.</div>';
+ $("v-near").innerHTML=h;
+}
+
+function tab(v){
+ if(!D||!D.stations.length)return;
+ view=v;for(const x of ["list","near","map"]){$("v-"+x).hidden=x!==v;$("t-"+x).setAttribute("aria-selected",x===v)}
+ if(v==="near"){nShow=40;getLoc()}
+ if(v==="map"){buildMap();map.locate({watch:true,setView:false,maximumAge:30000});setTimeout(()=>map.invalidateSize(),50)}else if(map)map.stopLocate();
+}
+document.querySelectorAll(".tabs button").forEach(b=>b.onclick=()=>tab(b.dataset.v));
+
+function sheet(html){$("sheet").innerHTML='<div class="card">'+html+'</div>';$("sheet").hidden=false}
+const closeSheet=()=>{$("sheet").hidden=true};
+$("sheet").addEventListener("click",e=>{if(e.target.id==="sheet")closeSheet()});
+document.addEventListener("keydown",e=>{if(e.key==="Escape")closeSheet()});
+
 function detail(id){
- var s=byId[id],el=document.getElementById("detail");
- var lab=(favs().filter(function(f){return f.s&&f.s.i===id})[0]||{}).label||s.n;
- el.hidden=false;
- el.innerHTML='<div class="dh">'+logo(s)+'<h2>'+esc(lab)+'</h2></div><div class="where">'+esc(s.n)+' · '+esc(s.pc)+' · updated '+esc(ago(s.u))+'</div>'
- +'<div class="fuels"><div class="fuel d"><div class="lab">Diesel</div><div class="big">'+fp(s.d)+'</div></div>'
- +'<div class="fuel"><div class="lab">Petrol E10</div><div class="big">'+fp(s.p)+'</div></div>'
- +(s.sd!=null?'<div class="fuel"><div class="lab">Super diesel</div><div class="big">'+fp(s.sd)+'</div></div>':'')
- +(s.sp!=null?'<div class="fuel"><div class="lab">Super unleaded</div><div class="big">'+fp(s.sp)+'</div></div>':'')+'</div>'
- +'<button class="act" id="show">Show on map</button> <button class="act" id="hide" style="background:var(--mute)">Close</button>';
- document.getElementById("show").onclick=function(){tab(true);map.setView([s.la,s.lo],15)};
- document.getElementById("hide").onclick=function(){el.hidden=true};
- el.scrollIntoView({behavior:"smooth",block:"nearest"});
+ const s=byId[id];if(!s)return;
+ const order=[S.fuel,...FUELS.map(f=>f[0]).filter(k=>k!==S.fuel)];
+ const tiles=order.filter(k=>k===S.fuel||s[k]!=null).map(k=>`<div class="fuel${k===S.fuel?" d":""}"><div class="lab">${FN[k]}</div><div class="big">${fp(s[k])}</div>${S.tank&&s[k]!=null?`<div class="tank">${gbp(S.tank*s[k]/100)} / tank</div>`:""}</div>`).join("");
+ sheet(`<div class="dh">${logo(s)}<h2>${esc(label(s))}</h2></div><div class="where">${esc(s.n)} · ${esc(s.pc)} · updated ${esc(ago(s.u))}</div>
+ ${S.tank?`<p class="small">Cost to fill ${esc(S.car||"your tank")} (${S.tank} L):</p>`:""}<div class="fuels">${tiles}</div>
+ <div class="acts">${starBtn(s.i)}<button class="act" id="show" data-id="${esc(s.i)}">Show on map</button><a class="act" target="_blank" rel="noopener" href="https://www.google.com/maps/dir/?api=1&destination=${s.la},${s.lo}">Directions</a><button class="act mute" id="hide">Close</button></div>`);
 }
-function tab(m){
- document.getElementById("vList").hidden=m;
- if(m)document.getElementById("detail").hidden=true;
- document.getElementById("vMap").hidden=!m;
- document.getElementById("tList").setAttribute("aria-selected",!m);document.getElementById("tMap").setAttribute("aria-selected",m);
- if(m){buildMap();map.locate({watch:true,setView:false,maximumAge:30000});setTimeout(function(){map.invalidateSize()},50)}else if(map){map.stopLocate()}
+
+function settings(){
+ sheet(`<h2>Settings</h2>
+ <label class="fld">Show this fuel first<select id="sFuel">${FUELS.map(f=>`<option value="${f[0]}"${f[0]===S.fuel?" selected":""}>${f[1]}</option>`).join("")}</select></label>
+ <label class="fld">Nearby radius<select id="sRad">${[5,10,15,25,50].map(r=>`<option value="${r}"${r===S.radius?" selected":""}>${r} miles</option>`).join("")}</select></label>
+ <label class="fld">My car (optional)<input id="sCar" placeholder="e.g. Ford Focus 1.5 TDCi" value="${esc(S.car)}"></label>
+ <label class="fld">Tank size (litres)<input id="sTank" type="number" inputmode="decimal" min="1" max="300" placeholder="e.g. 55" value="${S.tank||""}"></label>
+ <p class="small">Find your tank size in the car handbook, or search “[your model] fuel tank capacity”. Fill-up costs use the fuel chosen above, assuming an empty tank.</p>
+ <div class="acts"><button class="act mute" id="resetFav">Reset my stations</button><button class="act mute" id="clearFav">Clear my stations</button><button class="act" id="hide">Done</button></div>
+ <p class="small">All settings and stations are saved on this device only, so other people using the site have their own.</p>`);
 }
-document.getElementById("tList").onclick=function(){tab(false)};
-document.getElementById("tMap").onclick=function(){if(D&&D.stations.length)tab(true)};
+$("gear").onclick=settings;
+function refreshAll(){stamp();renderFavs();if(view==="near"&&loc)renderNearby()}
+$("sheet").addEventListener("change",e=>{
+ if(e.target.id==="sFuel"){S.fuel=e.target.value;saveS();refreshAll();if(map)layers()}
+ if(e.target.id==="sRad"){S.radius=+e.target.value;saveS();refreshAll()}
+});
+$("sheet").addEventListener("input",e=>{
+ if(e.target.id==="sCar"){S.car=e.target.value;saveS()}
+ if(e.target.id==="sTank"){const v=parseFloat(e.target.value);S.tank=v>0?v:null;saveS();refreshAll()}
+});
+
+function handleStar(b){
+ toggleFav(b.dataset.id);b.textContent=starText(b.dataset.id);
+ renderFavs();if(view==="near"&&loc)renderNearby();if(map)favMarkers();
+}
+document.addEventListener("click",e=>{
+ const t=e.target;
+ const st=t.closest(".star");if(st&&!st.closest(".leaflet-popup")){handleStar(st);return}
+ const r=t.closest(".row[data-id]");if(r){detail(r.dataset.id);return}
+ if(t.id==="hide"){closeSheet();return}
+ if(t.id==="show"){const s=byId[t.dataset.id];closeSheet();tab("map");map.setView([s.la,s.lo],15);return}
+ if(t.id==="more"){nShow+=40;renderNearby();return}
+ if(t.id==="retry"){getLoc(true);return}
+ if(t.id==="resetFav"){FAV=null;store.del("fuel-favs-v1");refreshAll();if(map)favMarkers();t.textContent="Done ✓";return}
+ if(t.id==="clearFav"){FAV=[];store.set("fuel-favs-v1",[]);refreshAll();if(map)favMarkers();t.textContent="Cleared ✓";return}
+});
+
+// map
 function popup(s){
- return '<div class="pop"><b>'+esc(s.n)+'</b><br><span class="where">'+esc(s.pc)+'</span><br>'
- +'Diesel <b>'+fp(s.d)+'</b><br>Petrol E10 '+fp(s.p)
- +(s.sd!=null?'<br>Super diesel '+fp(s.sd):'')+(s.sp!=null?'<br>Super unleaded '+fp(s.sp):'')
- +'<br><span class="where">Updated '+esc(ago(s.u))+'</span></div>';
+ const tc=tankCost(s),others=FUELS.map(f=>f[0]).filter(k=>k!==S.fuel&&s[k]!=null).map(k=>`${FN[k]} ${fp(s[k])}`).join("<br>");
+ return `<div class="pop"><b>${esc(label(s))}</b><br><span class="where">${esc(s.pc)}</span><br>${esc(FN[S.fuel])} <b>${fp(s[S.fuel])}</b>${tc!=null?` · ${gbp(tc)} / tank`:""}<br>${others}<br><span class="where">Updated ${esc(ago(s.u))}</span><br>${starBtn(s.i)}</div>`}
+function layers(){
+ cl.clearLayers();
+ for(const s of D.stations){
+  const m=L.circleMarker([s.la,s.lo],{radius:7,color:"#fff",weight:1.5,fillColor:colour(s)[0],fillOpacity:.95});
+  m.bindPopup(()=>popup(s));m.bindTooltip(fp(s[S.fuel]),{direction:"top",offset:[0,-6]});cl.addLayer(m);
+ }
+ favMarkers();
+}
+function favMarkers(){
+ favLayer.clearLayers();
+ const k=S.fuel,list=favIds().map(i=>byId[i]).filter(Boolean),vals=list.map(s=>s[k]).filter(v=>v!=null),best=vals.length?Math.min(...vals):null;
+ list.forEach(s=>{
+  const [bg,fg]=colour(s),gold=s[k]!=null&&s[k]===best;
+  const ic=L.divIcon({className:"",html:`<div class="fp${gold?" gold":""}" style="background:${bg};color:${fg}">★ ${s[k]==null?"—":s[k].toFixed(1)}</div>`,iconSize:[76,26],iconAnchor:[38,13]});
+  L.marker([s.la,s.lo],{icon:ic,zIndexOffset:gold?2000:1000}).bindPopup(()=>popup(s)).addTo(favLayer);
+ });
 }
 function buildMap(){
  if(map)return;
- map=L.map("map",{preferCanvas:true}).setView([51.375,-0.79],11);
+ map=L.map("map",{preferCanvas:true});
  L.tileLayer("https://tile.openstreetmap.org/{z}/{x}/{y}.png",{maxZoom:19,attribution:"&copy; OpenStreetMap contributors"}).addTo(map);
- var ds=D.stations.map(function(s){return s.d}).filter(function(v){return v!=null}).sort(function(a,b){return a-b});
- var lo=ds[Math.floor(ds.length*.33)],hi=ds[Math.floor(ds.length*.66)];
- var cl=L.markerClusterGroup({disableClusteringAtZoom:13,maxClusterRadius:55,chunkedLoading:true});
- var favIds={};D.favs.forEach(function(f){if(f.id)favIds[f.id]=1});
- D.stations.forEach(function(s){
-  if(favIds[s.i])return;
-  var c=s.d==null?"#94a3b8":s.d<=lo?"#16a34a":s.d<=hi?"#f59e0b":"#dc2626";
-  var m=L.circleMarker([s.la,s.lo],{radius:7,color:"#fff",weight:1.5,fillColor:c,fillOpacity:.95});
-  m.bindPopup(function(){return popup(s)});
-  m.bindTooltip(fp(s.d),{direction:"top",offset:[0,-6]});
-  cl.addLayer(m);
- });
- map.addLayer(cl);
- var fv=favs().filter(function(f){return f.s&&f.s.d!=null}).map(function(f){return f.s.d});
- var best=fv.length?Math.min.apply(null,fv):null;
- favs().forEach(function(f){
-  if(!f.s)return;
-  var ic=L.divIcon({className:"",html:'<div class="fp'+(f.s.d===best?' best':'')+'">★ '+(f.s.d==null?"—":f.s.d.toFixed(1))+'</div>',iconSize:[70,24],iconAnchor:[35,12]});
-  L.marker([f.s.la,f.s.lo],{icon:ic,zIndexOffset:1000}).bindPopup(popup(f.s)).addTo(map);
- });
- var pts=favs().filter(function(f){return f.s}).map(function(f){return[f.s.la,f.s.lo]});
- if(pts.length)map.fitBounds(L.latLngBounds(pts),{padding:[40,40],maxZoom:13});
- var btn=L.control({position:"topleft"});
- btn.onAdd=function(){var b=L.DomUtil.create("button","act");b.textContent="📍 Near me";b.style.margin="10px";b.onclick=function(e){e.stopPropagation();if(me){map.setView(me,14)}else{map.locate({setView:true,maxZoom:14})}};return b};
+ cl=L.markerClusterGroup({disableClusteringAtZoom:13,maxClusterRadius:55,chunkedLoading:true});
+ map.addLayer(cl);favLayer=L.layerGroup().addTo(map);
+ layers();
+ const pts=favIds().map(i=>byId[i]).filter(Boolean).map(s=>[s.la,s.lo]);
+ if(pts.length)map.fitBounds(L.latLngBounds(pts),{padding:[40,40],maxZoom:13});else map.setView([52.5,-1.8],6);
+ map.on("popupopen",e=>{const b=e.popup.getElement().querySelector(".star");if(b)b.onclick=()=>handleStar(b)});
+ const btn=L.control({position:"topleft"});
+ btn.onAdd=()=>{const b=L.DomUtil.create("button","act");b.textContent="📍 Near me";b.style.margin="10px";b.onclick=e=>{e.stopPropagation();if(me){map.setView(me,14)}else{map.locate({setView:true,maxZoom:14})}};return b};
  btn.addTo(map);
- map.on("locationfound",function(e){
+ map.on("locationfound",e=>{
   me=e.latlng;
   if(!meDot){
    meAcc=L.circle(e.latlng,{radius:e.accuracy,color:"#1a73e8",weight:1,fillOpacity:.12,interactive:false}).addTo(map);
@@ -155,7 +243,7 @@ function buildMap(){
   }else{meDot.setLatLng(e.latlng);meAcc.setLatLng(e.latlng).setRadius(e.accuracy)}
  });
 }
-if("serviceWorker" in navigator){window.addEventListener("load",function(){navigator.serviceWorker.register("sw.js").catch(function(){})})}
+if("serviceWorker" in navigator){window.addEventListener("load",()=>{navigator.serviceWorker.register("sw.js").catch(()=>{})})}
 </script>
 </body>
 </html>
