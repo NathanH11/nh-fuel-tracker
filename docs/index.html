@@ -84,6 +84,7 @@ let FAV=store.get("fuel-favs-v1",null);
 const fp=v=>v==null?"—":v.toFixed(1)+"p";
 const gbp=v=>"£"+v.toFixed(2);
 function ago(t){if(!t)return"";const m=Math.round((Date.now()-new Date(t))/60000);if(isNaN(m))return"";return m<60?m+" min ago":m<2880?Math.round(m/60)+" h ago":Math.round(m/1440)+" days ago"}
+const subline=(s,...p)=>[...p,s.pc,s.u?"updated "+ago(s.u):""].filter(Boolean).join(" · ");
 function km(a,b,c,d){const p=Math.PI/180,x=Math.sin((c-a)*p/2)**2+Math.cos(a*p)*Math.cos(c*p)*Math.sin((d-b)*p/2)**2;return 12742*Math.asin(Math.sqrt(x))}
 
 const BR=[["tesco","TESCO","#00539f","#fff"],["sainsbury","Sainsbury’s","#f06c00","#fff"],["esso","ESSO","#0a3d91","#fff"],["shell","SHELL","#fbce07","#dd1d21"],["bp","BP","#009a44","#ffe600"],["asda","ASDA","#78be20","#fff"],["texaco","TEXACO","#e31837","#fff"],["jet","JET","#ffd800","#111"],["morrisons","MORRISONS","#00704a","#ffd100"],["gulf","GULF","#f58220","#00529b"],["murco","MURCO","#d71920","#fff"],["applegreen","APPLEGREEN","#6cb33f","#fff"]];
@@ -119,7 +120,7 @@ function row(s,sub,best){const v=s[S.fuel],tc=tankCost(s);
 function renderFavs(){
  const k=S.fuel,list=favIds().map(i=>byId[i]).filter(Boolean).sort((a,b)=>((a[k]==null)-(b[k]==null))||(a[k]-b[k])||0);
  const best=list.length&&list[0][k]!=null?list[0][k]:null;
- $("v-list").innerHTML=list.length?list.map(s=>row(s,`${s.pc} · ${ago(s.u)}`,s[k]!=null&&s[k]===best)).join(""):'<div class="empty">No stations yet. Open the <b>UK map</b> or <b>Nearby</b>, tap a station and press ☆ to add it.</div>';
+ $("v-list").innerHTML=list.length?list.map(s=>row(s,subline(s),s[k]!=null&&s[k]===best)).join(""):'<div class="empty">No stations yet. Open the <b>UK map</b> or <b>Nearby</b>, tap a station and press ☆ to add it.</div>';
 }
 
 function getLoc(force){
@@ -136,7 +137,7 @@ function renderNearby(){
  for(const s of D.stations){if(s[k]==null)continue;const d=km(loc.lat,loc.lon,s.la,s.lo);if(d<=r)arr.push([d,s])}
  arr.sort((a,b)=>(a[1][k]-b[1][k])||(a[0]-b[0]));
  let h=`<p class="small" style="margin:0 0 10px">${arr.length} stations with ${esc(FN[k])} within ${S.radius} miles, cheapest first</p>`;
- arr.slice(0,nShow).forEach(([d,s],i)=>{h+=row(s,`${(d/1.609344).toFixed(1)} mi · ${s.pc}`,i===0)});
+ arr.slice(0,nShow).forEach(([d,s],i)=>{h+=row(s,subline(s,(d/1.609344).toFixed(1)+" mi"),i===0)});
  if(arr.length>nShow)h+='<button class="act" id="more">Show more</button>';
  if(!arr.length)h+='<div class="empty">Nothing found in this radius. Try a bigger radius in settings.</div>';
  $("v-near").innerHTML=h;
