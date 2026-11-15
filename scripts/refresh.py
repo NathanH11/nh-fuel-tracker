@@ -34,7 +34,7 @@ def http(method, url, body=None, token=None, tries=4):
         except urllib.error.HTTPError as e:
             body_txt = e.read().decode(errors="replace")[:500]
             print(f"HTTP {e.code} from {url}: {body_txt}", flush=True)
-            if e.code in (400, 403, 404) and ("batch-number" in url or "oauth" in url):
+            if "oauth" in url or (e.code in (400, 403, 404) and "batch-number" in url):
                 raise
             if e.code in (429, 500, 502, 503, 504) and n < tries - 1:
                 time.sleep(10 * (n + 1))
