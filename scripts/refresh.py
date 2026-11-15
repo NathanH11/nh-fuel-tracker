@@ -6,13 +6,14 @@ Usage:
   FF_CLIENT_ID=... FF_CLIENT_SECRET=... python scripts/refresh.py
   ... python scripts/refresh.py --inspect   # print raw field names (no secrets)
 """
-import os, sys, json, time, math, datetime, urllib.request, urllib.error
+import os, re, sys, json, time, math, datetime, urllib.request, urllib.error
 
 BASE = (os.environ.get("FF_BASE_URL") or "https://www.fuel-finder.service.gov.uk").rstrip("/")
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 OUT = os.path.join(ROOT, "docs", "data", "stations.json")
 INSPECT = "--inspect" in sys.argv
 FUELS = {"B7_STANDARD": "d", "E10": "p", "B7_PREMIUM": "sd", "E5": "sp"}
+PAUSE = 1.0  # seconds between data requests, so a run is a gentle trickle rather than a burst
 
 
 def http(method, url, body=None, token=None, tries=4):
@@ -33,10 +34,19 @@ def http(method, url, body=None, token=None, tries=4):
                 return json.loads(r.read().decode())
         except urllib.error.HTTPError as e:
             body_txt = e.read().decode(errors="replace")[:500]
-            print(f"HTTP {e.code} from {url}: {body_txt}", flush=True)
-            if "oauth" in url or (e.code in (400, 403, 404) and "batch-number" in url):
+            is_end = "batch-number" in url and e.code in (400, 404)  # normal "no more batches" signal
+            if not is_end:
+                print(f"HTTP {e.code} from {url}: {body_txt}", flush=True)
+            # Never retry a login (retries count as more failed attempts), and don't retry the end of the data.
+            if "oauth" in url or is_end:
                 raise
-            if e.code in (429, 500, 502, 503, 504) and n < tries - 1:
+            if e.code == 429 and n < tries - 1:
+                m = re.search(r"(\d+)\s*minute", body_txt)
+                wait = min(int(m.group(1)) * 60 + 15, 600) if m else 60 * (n + 1)
+                print(f"Rate limited: waiting {wait} s before trying again...", flush=True)
+                time.sleep(wait)
+                continue
+            if e.code in (500, 502, 503, 504) and n < tries - 1:
                 time.sleep(10 * (n + 1))
                 continue
             raise
@@ -91,6 +101,7 @@ def fetch_all(path, token):
             rows = rows_of(http("GET", f"{BASE}{path}?batch-number={batch}", token=token))
         except urllib.error.HTTPError as e:
             if out and e.code in (400, 404):
+                print(f"  {path}: no batch {batch}, so that's all of it ({len(out)} rows)", flush=True)
                 break
             raise
         if not rows:
@@ -98,6 +109,7 @@ def fetch_all(path, token):
         out.extend(rows)
         print(f"  {path} batch {batch}: {len(rows)} rows", flush=True)
         batch += 1
+        time.sleep(PAUSE)
     return out
 
 
