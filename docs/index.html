@@ -21,7 +21,7 @@ header{display:flex;justify-content:space-between;align-items:flex-start;gap:8px
 h1{font-size:1.4rem;margin:4px 0 2px}.sub{color:var(--mute);font-size:.85rem;margin:0 0 12px}
 #gear{background:var(--card);border:1px solid var(--line);border-radius:12px;font-size:1.2rem;padding:6px 10px;cursor:pointer;color:var(--text)}
 .tabs{display:flex;gap:6px;background:var(--line);padding:4px;border-radius:12px;margin-bottom:14px}
-.tabs button{flex:1;border:0;background:none;color:var(--mute);font:inherit;font-weight:600;font-size:.9rem;padding:9px 4px;border-radius:9px;cursor:pointer}
+.tabs button{flex:1;border:0;background:none;color:var(--mute);font:inherit;font-weight:600;font-size:.8rem;padding:9px 2px;border-radius:9px;cursor:pointer}
 .tabs button[aria-selected=true]{background:var(--card);color:var(--text);box-shadow:0 1px 3px rgba(0,0,0,.15)}
 .row{display:flex;align-items:center;justify-content:space-between;gap:12px;width:100%;background:var(--card);border:1px solid var(--line);border-radius:14px;padding:12px;margin-bottom:10px;color:inherit;font:inherit;text-align:left;cursor:pointer}
 .row:hover{border-color:var(--accent)}.row .info{flex:1;min-width:0}
@@ -47,6 +47,9 @@ h1{font-size:1.4rem;margin:4px 0 2px}.sub{color:var(--mute);font-size:.85rem;mar
 .legend{font-size:.78rem;color:var(--mute);margin:8px 0}
 .legend i{display:inline-block;width:10px;height:10px;border-radius:50%;margin:0 4px 0 10px;vertical-align:middle}
 .small{color:var(--mute);font-size:.78rem;margin:10px 0 0}.pop b{font-size:1.1rem}.pop .act{margin-top:8px}
+.seg{display:flex;gap:6px;margin-bottom:10px}.seg button{flex:1;border:1px solid var(--line);background:var(--card);color:var(--text);font:inherit;font-weight:600;padding:9px;border-radius:99px;cursor:pointer}.seg button[aria-pressed=true]{background:var(--accent);color:#fff;border-color:var(--accent)}
+.chk{display:block;margin:6px 0 12px;font-size:.9rem}#best-ctl .act{margin-bottom:12px}
+#map2{height:300px;border-radius:14px;border:1px solid var(--line);margin:10px 0}
 [hidden]{display:none!important}
 </style>
 </head>
@@ -57,9 +60,11 @@ h1{font-size:1.4rem;margin:4px 0 2px}.sub{color:var(--mute);font-size:.85rem;mar
 <button id="t-list" data-v="list" role="tab" aria-selected="true">My stations</button>
 <button id="t-near" data-v="near" role="tab" aria-selected="false">Nearby</button>
 <button id="t-map" data-v="map" role="tab" aria-selected="false">UK map</button>
+<button id="t-best" data-v="best" role="tab" aria-selected="false">Best value</button>
 </div>
 <section id="v-list"></section>
 <section id="v-near" hidden></section>
+<section id="v-best" hidden><div class="seg" id="best-seg"></div><div id="best-ctl"></div><div id="best-out"></div></section>
 <section id="v-map" hidden>
 <div id="map"></div>
 <div class="legend">Price: <i style="background:#16a34a"></i>cheap<i style="background:#f59e0b"></i>average<i style="background:#dc2626"></i>expensive · ★ box = my stations · gold outline = cheapest of mine</div>
@@ -78,7 +83,7 @@ const $=id=>document.getElementById(id);
 const esc=t=>String(t==null?"":t).replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
 const store={get(k,d){try{const v=localStorage.getItem(k);return v==null?d:JSON.parse(v)}catch(e){return d}},set(k,v){try{localStorage.setItem(k,JSON.stringify(v))}catch(e){}},del(k){try{localStorage.removeItem(k)}catch(e){}}};
 let D=null,byId={},map=null,cl=null,favLayer=null,me=null,meDot=null,meAcc=null,loc=null,thr={},view="list",nShow=40;
-let S=Object.assign({fuel:"d",radius:15,car:"",tank:null},store.get("fuel-settings-v1",{}));
+let S=Object.assign({fuel:"d",radius:15,car:"",tank:null,mpg:null},store.get("fuel-settings-v1",{}));
 let FAV=store.get("fuel-favs-v1",null);
 
 const fp=v=>v==null?"—":v.toFixed(1)+"p";
@@ -145,8 +150,9 @@ function renderNearby(){
 
 function tab(v){
  if(!D||!D.stations.length)return;
- view=v;for(const x of ["list","near","map"]){$("v-"+x).hidden=x!==v;$("t-"+x).setAttribute("aria-selected",x===v)}
+ view=v;for(const x of ["list","near","map","best"]){$("v-"+x).hidden=x!==v;$("t-"+x).setAttribute("aria-selected",x===v)}
  if(v==="near"){nShow=40;getLoc()}
+ if(v==="best")bestOpen();
  if(v==="map"){buildMap();map.locate({watch:true,setView:false,maximumAge:30000});setTimeout(()=>map.invalidateSize(),50)}else if(map)map.stopLocate();
 }
 document.querySelectorAll(".tabs button").forEach(b=>b.onclick=()=>tab(b.dataset.v));
@@ -162,7 +168,7 @@ function detail(id){
  const tiles=order.filter(k=>k===S.fuel||s[k]!=null).map(k=>`<div class="fuel${k===S.fuel?" d":""}"><div class="lab">${FN[k]}</div><div class="big">${fp(s[k])}</div>${S.tank&&s[k]!=null?`<div class="tank">${gbp(S.tank*s[k]/100)} / tank</div>`:""}</div>`).join("");
  sheet(`<div class="dh">${logo(s)}<h2>${esc(label(s))}</h2></div><div class="where">${esc(s.n)} · ${esc(s.pc)} · updated ${esc(ago(s.u))}</div>
  ${S.tank?`<p class="small">Cost to fill ${esc(S.car||"your tank")} (${S.tank} L):</p>`:""}<div class="fuels">${tiles}</div>
- <div class="acts">${starBtn(s.i)}<button class="act" id="show" data-id="${esc(s.i)}">Show on map</button><a class="act" target="_blank" rel="noopener" href="https://www.google.com/maps/dir/?api=1&destination=${s.la},${s.lo}">Directions</a><button class="act mute" id="hide">Close</button></div>`);
+ <div class="acts">${starBtn(s.i)}<button class="act" id="show" data-id="${esc(s.i)}">Show on map</button><a class="act" target="_blank" rel="noopener" href="https://www.google.com/maps/dir/?api=1&destination=${s.la},${s.lo}">Directions</a>${viaLink(s)}<button class="act mute" id="hide">Close</button></div>`);
 }
 
 function settings(){
@@ -171,18 +177,20 @@ function settings(){
  <label class="fld">Nearby radius<select id="sRad">${[5,10,15,25,50].map(r=>`<option value="${r}"${r===S.radius?" selected":""}>${r} miles</option>`).join("")}</select></label>
  <label class="fld">My car (optional)<input id="sCar" placeholder="e.g. Ford Focus 1.5 TDCi" value="${esc(S.car)}"></label>
  <label class="fld">Tank size (litres)<input id="sTank" type="number" inputmode="decimal" min="1" max="300" placeholder="e.g. 55" value="${S.tank||""}"></label>
- <p class="small">Find your tank size in the car handbook, or search “[your model] fuel tank capacity”. Fill-up costs use the fuel chosen above, assuming an empty tank.</p>
+ <label class="fld">Car economy (mpg, UK gallons)<input id="sMpg" type="number" inputmode="decimal" min="5" max="200" placeholder="e.g. 55" value="${S.mpg||""}"></label>
+ <p class="small">Find your tank size in the car handbook, or search “[your model] fuel tank capacity”. Fill-up costs use the fuel chosen above, assuming an empty tank. Your mpg is used on the <b>Best value</b> tab to price the drive to each station.</p>
  <div class="acts"><button class="act mute" id="resetFav">Reset my stations</button><button class="act mute" id="clearFav">Clear my stations</button><button class="act" id="hide">Done</button></div>
  <p class="small">All settings and stations are saved on this device only, so other people using the site have their own.</p>`);
 }
 $("gear").onclick=settings;
-function refreshAll(){stamp();renderFavs();if(view==="near"&&loc)renderNearby()}
+function refreshAll(){stamp();renderFavs();if(view==="near"&&loc)renderNearby();if(view==="best")bestRefresh()}
 $("sheet").addEventListener("change",e=>{
  if(e.target.id==="sFuel"){S.fuel=e.target.value;saveS();refreshAll();if(map)layers()}
  if(e.target.id==="sRad"){S.radius=+e.target.value;saveS();refreshAll()}
 });
 $("sheet").addEventListener("input",e=>{
  if(e.target.id==="sCar"){S.car=e.target.value;saveS()}
+ if(e.target.id==="sMpg"){const v=parseFloat(e.target.value);S.mpg=v>0?v:null;saveS();refreshAll()}
  if(e.target.id==="sTank"){const v=parseFloat(e.target.value);S.tank=v>0?v:null;saveS();refreshAll()}
 });
 
@@ -244,6 +252,141 @@ function buildMap(){
   }else{meDot.setLatLng(e.latlng);meAcc.setLatLng(e.latlng).setRadius(e.accuracy)}
  });
 }
+// ---- Best value: price + the cost of driving there, and journeys ----
+const MI=1.609344,GAL=4.54609,ROAD=1.3; // km per mile, litres per UK gallon, rough road-vs-straight-line factor
+let bestMode="around",bestShow=20,trip=null,map2=null;
+const aroundUI={round:true},tripUI={from:"My location",to:"",corr:3};
+const cpm=p=>p/100*GAL/S.mpg;            // £ per mile at p pence per litre
+const litres=()=>S.tank||40;
+const needMpg=()=>'<div class="empty">Add your car’s <b>mpg</b> in Settings so I can price the drive to each station.<br><br><button class="act" id="openSet">Open settings</button></div>';
+const killMap2=()=>{if(map2){map2.remove();map2=null}};
+const fmtMins=m=>m<60?Math.round(m)+" min":Math.floor(m/60)+" h "+Math.round(m%60)+" min";
+function whereAmI(){return new Promise((res,rej)=>{
+ if(loc&&Date.now()-loc.t<120000)return res(loc);
+ if(!navigator.geolocation)return rej(new Error("Location isn’t available on this device."));
+ navigator.geolocation.getCurrentPosition(p=>{loc={lat:p.coords.latitude,lon:p.coords.longitude,t:Date.now()};res(loc)},
+  ()=>rej(new Error("Couldn’t get your location. Allow location for this site and try again.")),{enableHighAccuracy:false,timeout:15000,maximumAge:60000})})}
+function bestOpen(){bestControls();bestRefresh();if(map2)setTimeout(()=>map2.invalidateSize(),50)}
+function bestControls(){
+ $("best-seg").innerHTML=`<button data-m="around" aria-pressed="${bestMode==="around"}">Around me</button><button data-m="route" aria-pressed="${bestMode==="route"}">On a journey</button>`;
+ $("best-ctl").innerHTML=bestMode==="around"
+  ?`<label class="chk"><input type="checkbox" id="aRound"${aroundUI.round?" checked":""}> Count the drive there and back</label>`
+  :`<label class="fld">From<input id="tFrom" value="${esc(tripUI.from)}" placeholder="My location"></label><label class="fld">To<input id="tTo" value="${esc(tripUI.to)}" placeholder="Postcode or place, e.g. Bristol"></label><label class="fld">Max distance off the route<select id="tCorr">${[1,2,3,5,10].map(c=>`<option value="${c}"${c===tripUI.corr?" selected":""}>${c} mile${c>1?"s":""}</option>`).join("")}</select></label><button class="act" id="tGo">Find best value</button>`;
+}
+function bestRefresh(){
+ if(!S.mpg){killMap2();$("best-out").innerHTML=needMpg();return}
+ if(bestMode==="around")renderAround();
+ else if(trip)tripShow();
+ else{killMap2();$("best-out").innerHTML='<div class="empty">Enter where you’re going and press <b>Find best value</b>.</div>'}
+}
+function bestRow(x,i,where){const s=x.s;
+ return `<button class="row" data-id="${esc(s.i)}">${logo(s)}<div class="info"><div class="name">${isFav(s.i)?"★ ":""}${esc(label(s))}${i===0?'<span class="badge">Best value</span>':""}</div><div class="where">${esc(where)}</div><div class="where">Fill £${x.fill.toFixed(2)} + drive £${x.drive.toFixed(2)}</div></div><div class="price"><div class="big">${gbp(x.total)}</div><div class="lab">total</div><div class="tank">${fp(s[S.fuel])}</div></div></button>`}
+const assume=()=>`Filling ${litres()} L${S.tank?"":" (40 L assumed; add your tank size in Settings)"} at ${S.mpg} mpg. Road distance is estimated.`;
+
+async function renderAround(){
+ const out=$("best-out");killMap2();
+ out.innerHTML='<div class="empty">Finding your location…</div>';
+ let p;try{p=await whereAmI()}catch(e){out.innerHTML=`<div class="empty">${esc(e.message)}<br><br><button class="act" id="aRetry">Try again</button></div>`;return}
+ const k=S.fuel,r=S.radius*MI,mult=aroundUI.round?2:1,arr=[];
+ for(const s of D.stations){if(s[k]==null)continue;const d=km(p.lat,p.lon,s.la,s.lo);if(d>r)continue;
+  const miles=d*ROAD/MI*mult,drive=miles*cpm(s[k]),fill=litres()*s[k]/100;arr.push({s,d:d/MI,drive,fill,total:fill+drive})}
+ arr.sort((a,b)=>a.total-b.total);
+ if(!arr.length){out.innerHTML=`<div class="empty">No stations with ${esc(FN[k])} within ${S.radius} miles. Try a bigger radius in Settings.</div>`;return}
+ const avg=arr.reduce((a,x)=>a+x.total,0)/arr.length;
+ out.innerHTML=`<p class="small" style="margin:0 0 10px">${arr.length} stations within ${S.radius} miles, ranked by fill-up plus the drive ${aroundUI.round?"there and back":"there"}. The best is about ${gbp(avg-arr[0].total)} cheaper than the average. ${assume()}</p>`
+  +arr.slice(0,bestShow).map((x,i)=>bestRow(x,i,subline(x.s,x.d.toFixed(1)+" mi away"))).join("")
+  +(arr.length>bestShow?'<button class="act" id="bMore">Show more</button>':"");
+}
+
+// journeys
+function segDist(la,lo,a,b){const kx=111.32*Math.cos(la*Math.PI/180),ky=111,
+ ax=(a[1]-lo)*kx,ay=(a[0]-la)*ky,bx=(b[1]-lo)*kx,by=(b[0]-la)*ky,dx=bx-ax,dy=by-ay,l2=dx*dx+dy*dy;
+ let t=l2?-(ax*dx+ay*dy)/l2:0;t=Math.max(0,Math.min(1,t));return[Math.hypot(ax+t*dx,ay+t*dy),t]}
+function resample(c){const cum=[0];for(let i=1;i<c.length;i++)cum.push(cum[i-1]+km(c[i-1][1],c[i-1][0],c[i][1],c[i][0]));
+ const total=cum[cum.length-1],step=Math.max(0.5,total/600),pts=[[c[0][1],c[0][0],0]];let next=step;
+ for(let i=1;i<c.length-1;i++)if(cum[i]>=next){pts.push([c[i][1],c[i][0],cum[i]]);next=cum[i]+step}
+ pts.push([c[c.length-1][1],c[c.length-1][0],total]);return pts}
+async function place(q){
+ q=q.trim();
+ if(!q||/^my location$/i.test(q)){const p=await whereAmI();return{lat:p.lat,lon:p.lon,me:true}}
+ const pc=q.replace(/\s+/g,"").toUpperCase();
+ if(/^[A-Z]{1,2}\d[A-Z\d]?\d[A-Z]{2}$/.test(pc)){try{const j=await(await fetch("https://api.postcodes.io/postcodes/"+pc)).json();if(j.status===200)return{lat:j.result.latitude,lon:j.result.longitude}}catch(e){}}
+ const j=await(await fetch("https://nominatim.openstreetmap.org/search?format=jsonv2&limit=1&countrycodes=gb&q="+encodeURIComponent(q))).json();
+ if(!j.length)throw new Error("Couldn’t find “"+q+"”. Try a postcode.");
+ return{lat:+j[0].lat,lon:+j[0].lon}}
+async function runTrip(){
+ const out=$("best-out"),btn=$("tGo");
+ if(!S.mpg){out.innerHTML=needMpg();return}
+ if(!tripUI.to.trim()){out.innerHTML='<div class="empty">Enter a destination first.</div>';return}
+ btn.disabled=true;btn.textContent="Working…";killMap2();out.innerHTML='<div class="empty">Planning your route…</div>';
+ try{
+  const from=await place(tripUI.from),to=await place(tripUI.to);
+  let j;try{j=await(await fetch(`https://router.project-osrm.org/route/v1/driving/${from.lon},${from.lat};${to.lon},${to.lat}?overview=full&geometries=geojson`)).json()}
+  catch(e){throw new Error("Couldn’t get a route right now. The free routing service may be busy, so try again in a minute.")}
+  if(!j.routes||!j.routes.length)throw new Error("No driving route found between those places.");
+  const rt=j.routes[0];
+  trip={from,to,line:rt.geometry.coordinates.map(c=>[c[1],c[0]]),pts:resample(rt.geometry.coordinates),miles:rt.distance/1609.344,mins:rt.duration/60,ids:new Set()};
+  bestShow=20;tripShow();
+ }catch(e){trip=null;out.innerHTML=`<div class="empty">${esc(e.message||"Couldn’t plan that route.")}</div>`}
+ const b=$("tGo");if(b){b.disabled=false;b.textContent="Find best value"}
+}
+function tripCalc(){
+ const k=S.fuel,W=tripUI.corr*MI,R=trip.pts;let a=90,b=-90,c=180,d=-180;
+ for(const p of R){if(p[0]<a)a=p[0];if(p[0]>b)b=p[0];if(p[1]<c)c=p[1];if(p[1]>d)d=p[1]}
+ const pl=W/111,po=W/(111*Math.cos((a+b)/2*Math.PI/180)),out=[];
+ for(const s of D.stations){
+  if(s[k]==null||s.la<a-pl||s.la>b+pl||s.lo<c-po||s.lo>d+po)continue;
+  let best=1e9,al=0;
+  for(let i=0;i<R.length-1;i++){const r=segDist(s.la,s.lo,R[i],R[i+1]);if(r[0]<best){best=r[0];al=R[i][2]+r[1]*(R[i+1][2]-R[i][2])}}
+  if(best>W)continue;
+  const off=best<0.15?0:best*ROAD/MI,drive=2*off*cpm(s[k]),fill=litres()*s[k]/100;
+  out.push({s,off,along:al/MI,drive,fill,total:fill+drive});
+ }
+ return out.sort((x,y)=>x.total-y.total);
+}
+function tripShow(){
+ killMap2();const out=$("best-out"),res=tripCalc();
+ trip.ids=new Set(res.map(x=>String(x.s.i)));
+ const info=`<p class="small" style="margin:0 0 6px"><b>${trip.miles.toFixed(0)} miles</b>, about ${fmtMins(trip.mins)} (typical, not live traffic). ${res.length} stations within ${tripUI.corr} mile${tripUI.corr>1?"s":""} of the route.</p>`;
+ if(!res.length){out.innerHTML=info+'<div class="empty">No stations with this fuel near that route. Try a larger distance.</div>';return}
+ const avg=res.reduce((a,x)=>a+x.total,0)/res.length;
+ out.innerHTML=info+`<p class="small" style="margin:0 0 6px">Ranked by fill-up plus the detour. The best is about ${gbp(avg-res[0].total)} cheaper than the average on this route. ${assume()}</p><div id="map2"></div>`
+  +res.slice(0,bestShow).map((x,i)=>bestRow(x,i,subline(x.s,Math.round(x.along)+" mi into trip"+(x.off>=0.1?" · "+x.off.toFixed(1)+" mi off route":" · on route")))).join("")
+  +(res.length>bestShow?'<button class="act" id="bMore">Show more</button>':"");
+ drawMap2(res.slice(0,10));
+}
+function drawMap2(top){
+ map2=L.map("map2");
+ L.tileLayer("https://tile.openstreetmap.org/{z}/{x}/{y}.png",{maxZoom:19,attribution:"&copy; OpenStreetMap contributors"}).addTo(map2);
+ const line=L.polyline(trip.line,{color:"#d4008c",weight:5,opacity:.85}).addTo(map2);
+ L.circleMarker([trip.from.lat,trip.from.lon],{radius:7,color:"#fff",weight:2,fillColor:"#16a34a",fillOpacity:1}).bindTooltip("Start",{permanent:true,direction:"top"}).addTo(map2);
+ L.circleMarker([trip.to.lat,trip.to.lon],{radius:7,color:"#fff",weight:2,fillColor:"#dc2626",fillOpacity:1}).bindTooltip("End",{permanent:true,direction:"top"}).addTo(map2);
+ top.forEach((x,i)=>{const[bg,fg]=colour(x.s);
+  const ic=L.divIcon({className:"",html:`<div class="fp${i===0?" gold":""}" style="background:${bg};color:${fg}">${i+1} · ${x.s[S.fuel].toFixed(1)}</div>`,iconSize:[78,26],iconAnchor:[39,13]});
+  L.marker([x.s.la,x.s.lo],{icon,zIndexOffset:i===0?2000:1000-i}).on("click",()=>detail(String(x.s.i))).addTo(map2)});
+ map2.fitBounds(line.getBounds(),{padding:[20,20]});
+}
+function viaLink(s){
+ if(!trip||!trip.ids.has(String(s.i)))return"";
+ return `<a class="act" target="_blank" rel="noopener" href="https://www.google.com/maps/dir/?api=1${trip.from.me?"":`&origin=${trip.from.lat},${trip.from.lon}`}&destination=${trip.to.lat},${trip.to.lon}&waypoints=${s.la},${s.lo}&travelmode=driving">Route via here</a>`}
+
+document.addEventListener("click",e=>{
+ const t=e.target,m=t.closest("#best-seg button");
+ if(m){bestMode=m.dataset.m;bestShow=20;killMap2();bestControls();bestRefresh();return}
+ if(t.id==="openSet"){settings();return}
+ if(t.id==="aRetry"){renderAround();return}
+ if(t.id==="bMore"){bestShow+=20;bestRefresh();return}
+ if(t.id==="tGo"){runTrip();return}
+});
+document.addEventListener("change",e=>{
+ if(e.target.id==="aRound"){aroundUI.round=e.target.checked;renderAround()}
+ if(e.target.id==="tCorr"){tripUI.corr=+e.target.value;if(trip)tripShow()}
+});
+document.addEventListener("input",e=>{
+ if(e.target.id==="tFrom")tripUI.from=e.target.value;
+ if(e.target.id==="tTo")tripUI.to=e.target.value;
+});
+
 if("serviceWorker" in navigator){window.addEventListener("load",()=>{navigator.serviceWorker.register("sw.js").catch(()=>{})})}
 </script>
 </body>
