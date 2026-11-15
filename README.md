@@ -11,8 +11,9 @@ A personal fuel price website and phone app for Wokingham, Winnersh, Earley, San
 | **My stations** | Your saved stations, cheapest first, for the fuel you chose (diesel by default), with brand badges and an optional "cost to fill the tank". Tap one for all fuel prices and directions. |
 | **Nearby** | Every station within a radius of your location (15 miles by default), cheapest first, with distance. |
 | **UK map** | Every UK forecourt on a zoomable OpenStreetMap. Dots are green, amber or red (cheap, average, expensive). Your stations show as price boxes, with a gold outline on the cheapest of yours. A blue dot shows where you are. |
+| **Best value** | Ranks stations by the *real* cost: filling up plus the fuel burned driving there (uses your mpg). **Around me** ranks stations near you; **On a journey** finds the best value along a route you type in, with a map. |
 | **Star button** | Tap any station (map, Nearby or its detail panel) and press ☆ to add it to My stations, or ★ to remove it. |
-| **Settings (⚙️)** | Pick which fuel shows first (diesel, petrol E10, super unleaded, super diesel), the Nearby radius, and your car name and tank size for fill-up costs. |
+| **Settings (⚙️)** | Pick which fuel shows first (diesel, petrol E10, super unleaded, super diesel), the Nearby radius, and your car name, tank size and mpg for fill-up and drive costs. |
 | **Install as an app** | In Chrome (Android) choose Install app; on iPhone use Safari, Share, Add to Home Screen. |
 
 ## How it works (the big picture)
@@ -47,6 +48,16 @@ How it's wired up:
 - The GitHub secret `FF_BASE_URL` holds the Worker's address (`https://something.workers.dev`, including `https://`). `refresh.py` uses that instead of the government address.
 - The Worker is a plain pass-through. Anyone who knew its address could send requests through it, but they would still need valid API credentials, which only you have. It's sensible not to share the address.
 - Usage is tiny: about 35 requests per refresh, roughly 1,700 a day, well within Cloudflare's free allowance (100,000 requests a day when this was set up).
+
+## Best value tab
+
+Add your car's **mpg** (and tank size) in Settings, then open **Best value**:
+
+- **Around me:** for every station in your Nearby radius it adds the fill-up cost (tank size x price) to the cost of the fuel burned driving there (and back, if ticked). The cheapest *total* comes first, so a station that is a few pence cheaper but miles away drops down.
+- **On a journey:** type a start (leave "My location" for where you are) and a destination. The app asks a free routing service for the driving route, keeps stations within a few miles of it, and ranks them by fill-up plus the detour. Tap a station and use **Route via here** to open Google Maps with that stop added, which gives you live traffic.
+- **Estimates:** road distance is guessed as 1.3 times the straight-line distance, miles per gallon are UK gallons, and if no tank size is set it assumes 40 litres. Journey times are typical, not live traffic.
+- **Privacy:** only the Journey view contacts other services. Your start and destination (the exact coordinates if you use "My location") go to the OSRM routing demo server, and any place names or postcodes you type go to postcodes.io or OpenStreetMap's Nominatim to be turned into coordinates. Nothing is sent to anything of mine, and "Around me" stays entirely on your device.
+- **Limits:** these are free public services with fair-use limits, so a route can occasionally fail when they are busy. Try again after a minute.
 
 ## Where things are stored (privacy)
 
