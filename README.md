@@ -16,6 +16,8 @@ A personal fuel price website and phone app for Wokingham, Winnersh, Earley, San
 | **Settings (⚙️)** | Pick which fuel shows first (diesel, petrol E10, super unleaded, super diesel), the Nearby radius, and your car name, tank size and mpg for fill-up and drive costs. |
 | **Install as an app** | In Chrome (Android) choose Install app; on iPhone use Safari, Share, Add to Home Screen. |
 
+The site always uses a dark theme, whatever the phone's setting.
+
 ## How it works (the big picture)
 
 ```
@@ -55,7 +57,7 @@ Add your car's **mpg** (and tank size) in Settings, then open **Best value**. Bo
 
 - **Around me:** for every station in your Nearby radius it adds the fill-up cost (litres x price) to the cost of the fuel burned driving there (and back, if ticked). The cheapest *total* comes first, so a station that is a few pence cheaper but miles away drops down.
 - **On a journey:** works like a maps search. Type a start (it defaults to "My location") and a destination, and suggestions appear as you type (postcodes, towns and places). Pick one and a pin appears on the map; once both are chosen the route is drawn with its distance and typical time, and the stations near the route are ranked by fill-up plus the detour. Tap a station and use **Route via here** to open Google Maps with that stop added, which gives you live traffic. The max distance off the route is adjustable.
-- **Fuel you already have:** tick *Account for the fuel I already have* and set how full the tank is now. The app works out your range (tank size x mpg x how full it is) and keeps a 15-mile reserve. Around me then only shows stations you can actually reach. On a journey it tells you roughly where along the route you will need to fill up (also marked on the map with a pump pin), shows only the stations you can reach before that, and ranks them by total cost. If you have enough fuel to finish the trip it says so and shows the cheapest top-up options anyway. The amount you buy is capped to the room left in the tank.
+- **Fuel you already have:** tick *Account for the fuel I already have* and set how full the tank is now. The app works out your range (tank size x mpg x how full it is) and keeps a 15-mile reserve. Around me then only shows stations you can actually reach. On a journey it tells you roughly where along the route you will need to fill up (also marked on the map with a pump pin), shows only the stations you can reach before that, and ranks them by total cost. If you have enough fuel to finish the trip it says so and shows the cheapest top-up options anyway. It assumes you will fill the tank to full from there, so the *Amount to fill* slider is hidden while this is ticked.
 - **Cost per mile and range:** every station shows its cost per mile for your car (price per litre x litres per mile from your mpg), and the sliders show how many miles a fill adds and how many miles the fuel in your tank gets you.
 - **Estimates:** road distance is guessed as 1.3 times the straight-line distance, miles per gallon are UK gallons, and if no tank size is set it assumes 40 litres. Journey times are typical, not live traffic.
 - **Privacy:** only the journey search contacts other services. What you type is sent to postcodes.io (postcodes) and Photon by Komoot (towns and places) to give suggestions and coordinates. The start and end coordinates (the exact position if you use "My location") go to the OSRM demo server to get the route. Nothing is sent to anything of mine, and "Around me" stays entirely on your device.
@@ -109,4 +111,4 @@ Add your car's **mpg** (and tank size) in Settings, then open **Best value**. Bo
 - Map tiles and data: OpenStreetMap contributors (free tiles are fine for light personal use).
 - Free tiers used: GitHub (public repo, Actions, Pages), Cloudflare Workers.
 - The API's field names or login method could change in future. If a run starts failing with a data-format error, run the script with `--inspect` to see what changed.
-- The built-in brand logos are simple drawings in each brand's colours (Esso, Shell, BP, Tesco, Sainsbury's, Asda, Costco and EG); they are my own approximations, not the official artwork, which is trademarked. Use `docs/logos/` to show the real ones.
+- The built-in brand logos are simple drawings in each brand's colours (Esso, Shell, BP, Sainsbury's, Asda, Costco and EG; Tesco is a plain blue badge with white text); they are my own approximations, not the official artwork, which is trademarked. Use `docs/logos/` to show the real ones.
