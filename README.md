@@ -51,13 +51,13 @@ How it's wired up:
 
 ## Best value tab
 
-Add your car's **mpg** (and tank size) in Settings, then open **Best value**:
+Add your car's **mpg** (and tank size) in Settings, then open **Best value**. Both modes have an **Amount to fill** slider, with marks at every eighth of a tank and labels at empty, quarter, half, three quarters and full. It snaps to the marks when you get close, and the cost reflects how much you are actually putting in.
 
-- **Around me:** for every station in your Nearby radius it adds the fill-up cost (tank size x price) to the cost of the fuel burned driving there (and back, if ticked). The cheapest *total* comes first, so a station that is a few pence cheaper but miles away drops down.
-- **On a journey:** type a start (leave "My location" for where you are) and a destination. The app asks a free routing service for the driving route, keeps stations within a few miles of it, and ranks them by fill-up plus the detour. Tap a station and use **Route via here** to open Google Maps with that stop added, which gives you live traffic.
+- **Around me:** for every station in your Nearby radius it adds the fill-up cost (litres x price) to the cost of the fuel burned driving there (and back, if ticked). The cheapest *total* comes first, so a station that is a few pence cheaper but miles away drops down.
+- **On a journey:** works like a maps search. Type a start (it defaults to "My location") and a destination, and suggestions appear as you type (postcodes, towns and places). Pick one and a pin appears on the map; once both are chosen the route is drawn with its distance and typical time, and the stations near the route are ranked by fill-up plus the detour. Tap a station and use **Route via here** to open Google Maps with that stop added, which gives you live traffic. The max distance off the route is adjustable.
 - **Estimates:** road distance is guessed as 1.3 times the straight-line distance, miles per gallon are UK gallons, and if no tank size is set it assumes 40 litres. Journey times are typical, not live traffic.
-- **Privacy:** only the Journey view contacts other services. Your start and destination (the exact coordinates if you use "My location") go to the OSRM routing demo server, and any place names or postcodes you type go to postcodes.io or OpenStreetMap's Nominatim to be turned into coordinates. Nothing is sent to anything of mine, and "Around me" stays entirely on your device.
-- **Limits:** these are free public services with fair-use limits, so a route can occasionally fail when they are busy. Try again after a minute.
+- **Privacy:** only the journey search contacts other services. What you type is sent to postcodes.io (postcodes) and Photon by Komoot (towns and places) to give suggestions and coordinates. The start and end coordinates (the exact position if you use "My location") go to the OSRM demo server to get the route. Nothing is sent to anything of mine, and "Around me" stays entirely on your device.
+- **Limits:** these are free public services with fair-use limits, so suggestions or routes can occasionally fail when they are busy. Try again after a minute.
 
 ## Where things are stored (privacy)
 
