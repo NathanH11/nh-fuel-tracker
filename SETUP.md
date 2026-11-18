@@ -28,7 +28,7 @@ Repo, **Settings, Secrets and variables, Actions, New repository secret**:
 Repo, **Settings, Pages, Build and deployment, Source: GitHub Actions**.
 
 ## 6. Run it
-**Actions, Refresh fuel prices, Run workflow.** A green tick means your site is live at `https://YOUR-USERNAME.github.io/YOUR-REPO/`. From then on it updates every 30 minutes (the cron line in `refresh.yml` is `17,47 * * * *`).
+**Actions, Refresh fuel prices, Run workflow.** A green tick means your site is live at `https://YOUR-USERNAME.github.io/YOUR-REPO/`. For reliable 30-minute updates, also do step 9.
 
 ## 7. Check your stations matched
 In the run's *Fetch prices from Fuel Finder* log, look for `MATCH` lines. Fix any `NO MATCH` by editing the postcode or coordinates in `config.json`.
@@ -36,5 +36,27 @@ In the run's *Fetch prices from Fuel Finder* log, look for `MATCH` lines. Fix an
 ## 8. Put it on your phone
 - **Android (Chrome):** open the site, menu (three dots), **Install app**.
 - **iPhone (Safari):** Share, **Add to Home Screen**.
+
+## 9. Make the 30-minute updates reliable (Cloudflare timer)
+
+GitHub's own scheduler often only runs a few times a day, so let Cloudflare start the refresh instead.
+
+**A. Create a GitHub token** (it lets the Worker start the refresh, nothing else)
+1. GitHub, click your profile picture, **Settings**, **Developer settings**, **Personal access tokens**, **Fine-grained tokens**, **Generate new token**.
+2. Name it `fuel-timer`. Set the expiry to the longest offered and put a reminder in your calendar to renew it.
+3. Repository access: **Only select repositories**, then choose your fuel tracker repo.
+4. Repository permissions: set **Actions** to **Read and write**. Leave everything else as it is.
+5. **Generate token** and copy it now (it's only shown once). Don't paste it anywhere except step B.
+
+**B. Update the Worker in Cloudflare**
+1. **Workers & Pages**, open your Worker, **Edit code**. Replace everything with the contents of `cloudflare-worker.js` (check the `GH_REPO` line at the top matches your GitHub username/repo), then **Deploy**.
+2. Open the Worker's **Settings**, then **Variables and Secrets**, **Add**. Type: **Secret**, name `GITHUB_TOKEN`, value: your token. Save and deploy.
+3. In **Settings**, **Triggers** (also called **Trigger Events**), **Cron Triggers**, **Add**: `*/30 * * * *`, then save. (This is in UTC; use `0 * * * *` for hourly.)
+
+**C. Replace the workflow** (adds retries, and makes uploads reuse the last prices instead of calling the API; GitHub's own schedule becomes a slow backup)
+In your repo open `.github/workflows/refresh.yml`, click the pencil, select everything, paste the contents of `workflow-to-paste.yml`, and commit.
+
+**D. Check it works**
+Within 30 minutes, **Actions** should show runs started by *workflow_dispatch* around :00 and :30 past each hour. Each takes a few minutes. If none appear, check the token (step A, permission **Actions: Read and write**, correct repository) and the secret name `GITHUB_TOKEN`.
 
 For problems, see the Troubleshooting table in README.md.
