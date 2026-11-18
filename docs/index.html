@@ -181,7 +181,7 @@ function handleCard(b,pop){
  if(pop){pop.setContent(popup(s));bindPop(pop);cardDirty=true}else{detail(id);if(map)layers()}
 }
 const inpCss="font:inherit;padding:6px;border-radius:8px;border:1px solid var(--line);background:var(--bg);color:var(--text)";
-const cardOptsHtml=()=>{if(!S.card.on)return"";const f=(k,t)=>`<label style="display:flex;justify-content:space-between;align-items:center;gap:6px">${t}<span><input id="cr_${k}" type="number" inputmode="decimal" step="0.5" min="0" max="30" value="${S.card.r[k]}" style="width:60px;${inpCss}"> p</span></label>`;return `<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px 14px;margin-top:8px;font-size:.85rem">${f("p","Synergy Unleaded")}${f("d","Synergy Diesel")}${f("sp","Supreme+ 99 Unleaded")}${f("sd","Supreme+ Diesel")}</div><div class="small" style="margin:6px 0 0">Pence off per litre at Esso stations, which then show the card price marked 💳. Change these if your card terms change. Tap an Esso station to mark it as not accepting the card.</div>`};
+const cardRatesHtml=()=>{const f=(k,t)=>`<label style="display:flex;justify-content:space-between;align-items:center;gap:6px">${t}<span><input id="cr_${k}" type="number" inputmode="decimal" step="0.5" min="0" max="30" value="${S.card.r[k]}" style="width:60px;${inpCss}"> p</span></label>`;return `<div style="margin:16px 0 4px;font-weight:600">WEX Esso fuel card discounts</div><p class="small" style="margin:0 0 8px">Pence off per litre at Esso stations. They apply when “I have a WEX Esso fuel card” is ticked on the My stations tab. Change them if your card terms change.</p><div style="display:grid;grid-template-columns:1fr 1fr;gap:8px 14px;font-size:.85rem">${f("p","Synergy Unleaded")}${f("d","Synergy Diesel")}${f("sp","Supreme+ 99 Unleaded")}${f("sd","Supreme+ Diesel")}</div>`};
 const showCardBtn=s=>S.card.on&&(brandOn(S.card.brands[s.bk||(s.bk=brand(s)[0])])||S.card.ov[String(s.i)]!==undefined);
 fetch("data/stations.json?"+Date.now()).then(r=>r.json()).then(init).catch(()=>{$("stamp").textContent="Couldn’t load price data."});
 function init(d){
@@ -253,6 +253,7 @@ function settings(){
  <label class="fld">Tank size (litres)<input id="sTank" type="number" inputmode="decimal" min="1" max="300" placeholder="e.g. 55" value="${S.tank||""}"></label>
  <label class="fld">Car economy (mpg, UK gallons)<input id="sMpg" type="number" inputmode="decimal" min="5" max="200" placeholder="e.g. 55" value="${S.mpg||""}"></label>
  <p class="small">Find your tank size in the car handbook, or search “[your model] fuel tank capacity”. Fill-up costs use the fuel chosen above, assuming an empty tank. Your mpg is used on the <b>Best value</b> tab to price the drive to each station.</p>
+ ${cardRatesHtml()}
  <div class="acts"><button class="act mute" id="resetFav">Reset my stations</button><button class="act mute" id="clearFav">Clear my stations</button><button class="act" id="hide">Done</button></div>
  <p class="small">All settings and stations are saved on this device only, so other people using the site have their own.</p>`);
 }
@@ -360,7 +361,7 @@ function fillMilesText(){
  if(!S.tank)return"Add your tank size in Settings to see what each fill costs.";
  if(!S.mpg)return"Add your mpg in Settings to see miles and cost per mile.";
  return`Adds about ${fillMiles().toFixed(0)} miles of driving. Costs below are for this fill.`}
-const renderFillCard=()=>{$("fillcard").innerHTML=`<div class="fld" style="margin:0">Fill-up: <b class="fillTxt" style="color:var(--text)">${fillText()}</b>${sliderHtml("fillR",S.fillPct)}<div class="small" id="fillMi" style="margin:0">${fillMilesText()}</div></div><label class="chk" style="margin:12px 0 0"><input type="checkbox" id="cardOn"${S.card.on?" checked":""}> 💳 I have a WEX Esso fuel card</label><div id="cardOpts">${cardOptsHtml()}</div>`};
+const renderFillCard=()=>{$("fillcard").innerHTML=`<div class="fld" style="margin:0">Fill-up: <b class="fillTxt" style="color:var(--text)">${fillText()}</b>${sliderHtml("fillR",S.fillPct)}<div class="small" id="fillMi" style="margin:0">${fillMilesText()}</div></div><label class="chk" style="margin:12px 0 0"><input type="checkbox" id="cardOn"${S.card.on?" checked":""}> 💳 I have a WEX Esso fuel card</label>`};
 const syncFill=()=>{document.querySelectorAll(".fillR").forEach(x=>{x.value=S.fillPct});document.querySelectorAll(".fillTxt").forEach(x=>{x.textContent=fillText()});const m=$("fillMi");if(m)m.textContent=fillMilesText()};
 const syncLvl=()=>{document.querySelectorAll(".lvlTxt").forEach(x=>{x.textContent=lvlText()})};
 const needMpg=()=>'<div class="empty">Add your car’s <b>mpg</b> in Settings so I can price the drive to each station.<br><br><button class="act" id="openSet">Open settings</button></div>';
@@ -574,7 +575,7 @@ document.addEventListener("click",e=>{
 });
 document.addEventListener("change",e=>{
  const id=e.target.id;
- if(id==="cardOn"){S.card.on=e.target.checked;S.card.brands={esso:true};$("cardOpts").innerHTML=cardOptsHtml();cardChanged()}
+ if(id==="cardOn"){S.card.on=e.target.checked;S.card.brands={esso:true};cardChanged()}
  if(id==="aRound"){aroundUI.round=e.target.checked;renderAround()}
  if(id==="tCorr"){tripUI.corr=+e.target.value;if(trip)tripShow()}
  const cl=e.target.classList;
