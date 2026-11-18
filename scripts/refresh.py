@@ -27,6 +27,13 @@ def http(method, url, body=None, token=None, tries=4):
         headers["Content-Type"] = "application/json"
     if token:
         headers["Authorization"] = "Bearer " + token
+    # The Cloudflare proxy requires a separate shared secret. This is supplied
+    # as a GitHub Actions secret and is never written to the public website.
+    proxy_secret = os.environ.get("FF_PROXY_SECRET", "").strip()
+    if "workers.dev" in BASE.lower() or os.environ.get("FF_REQUIRE_PROXY_AUTH") == "1":
+        if not proxy_secret:
+            sys.exit("Set FF_PROXY_SECRET: the configured Fuel Finder proxy requires authentication.")
+        headers["X-Proxy-Auth"] = proxy_secret
     for n in range(tries):
         req = urllib.request.Request(url, data=data, headers=headers, method=method)
         try:
