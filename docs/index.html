@@ -73,6 +73,8 @@ h1{font-size:1.4rem;margin:4px 0 2px}.sub{color:var(--mute);font-size:.85rem;mar
 .ticks{position:relative;height:34px;margin:0 11px}
 .ticks i{position:absolute;top:0;width:2px;height:7px;margin-left:-1px;background:var(--mute);opacity:.6}.ticks i.mj{height:12px;opacity:1}
 .ticks b{position:absolute;top:15px;transform:translateX(-50%);font-size:.72rem;font-weight:700;color:var(--mute)}
+.brow{display:flex;justify-content:space-between;align-items:center;gap:8px;padding:6px 0;border-bottom:1px solid var(--line);font-size:.9rem}.brow input[type=number]{width:72px;font:inherit;padding:6px;border-radius:8px;border:1px solid var(--line);background:var(--bg);color:var(--text)}
+details summary{cursor:pointer;padding:6px 0}
 [hidden]{display:none!important}
 </style>
 </head>
@@ -105,8 +107,12 @@ const FN=Object.fromEntries(FUELS);
 const $=id=>document.getElementById(id);
 const esc=t=>String(t==null?"":t).replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
 const store={get(k,d){try{const v=localStorage.getItem(k);return v==null?d:JSON.parse(v)}catch(e){return d}},set(k,v){try{localStorage.setItem(k,JSON.stringify(v))}catch(e){}},del(k){try{localStorage.removeItem(k)}catch(e){}}};
+let cardDirty=false,curPop=null;
 let D=null,byId={},map=null,cl=null,favLayer=null,me=null,meDot=null,meAcc=null,loc=null,thr={},view="list",nShow=40;
 let S=Object.assign({fuel:"d",radius:15,car:"",tank:null,mpg:null,fillPct:100,useLevel:false,level:25},store.get("fuel-settings-v1",{}));
+S.card=Object.assign({on:false,brands:{},ov:{}},S.card||{});
+S.card.r=Object.assign({d:4,p:3,sp:5,sd:6},S.card.r||{}); // pence off per litre by fuel
+S.card.brands={esso:true}; // WEX card: Esso stations only (single stations can be overridden)
 let FAV=store.get("fuel-favs-v1",null);
 
 const fp=v=>v==null?"—":v.toFixed(1)+"p";
@@ -115,7 +121,7 @@ function ago(t){if(!t)return"";const m=Math.round((Date.now()-new Date(t))/60000
 const subline=(s,...p)=>[...p,s.pc,s.u?"updated "+ago(s.u):""].filter(Boolean).join(" · ");
 function km(a,b,c,d){const p=Math.PI/180,x=Math.sin((c-a)*p/2)**2+Math.cos(a*p)*Math.cos(c*p)*Math.sin((d-b)*p/2)**2;return 12742*Math.asin(Math.sqrt(x))}
 
-const BR=[["esso","ESSO","#0a3d91","#fff"],["shell","SHELL","#fbce07","#dd1d21"],["bp","BP","#009a44","#ffe600"],["tesco","TESCO","#00539f","#fff"],["sainsbury","Sainsbury’s","#f06c00","#fff"],["asda","ASDA","#78be20","#fff"],["costco","COSTCO","#e31837","#fff"],["eg","EG","#003a70","#fff"],["texaco","TEXACO","#e31837","#fff"],["jet","JET","#ffd800","#111"],["morrisons","MORRISONS","#00704a","#ffd100"],["gulf","GULF","#f58220","#00529b"],["murco","MURCO","#d71920","#fff"],["applegreen","APPLEGREEN","#6cb33f","#fff"]];
+const BR=[["esso","ESSO","#0a3d91","#fff"],["shell","SHELL","#fbce07","#dd1d21"],["bp","BP","#009a44","#ffe600"],["tesco","TESCO","#00539f","#fff"],["sainsbury","Sainsbury’s","#f06c00","#fff"],["asda","ASDA","#78be20","#fff"],["costco","COSTCO","#e31837","#fff"],["eg","EG","#003a70","#fff"],["texaco","TEXACO","#e31837","#fff"],["jet","JET","#ffd800","#111"],["morrisons","MORRISONS","#00704a","#ffd100"],["gulf","GULF","#f58220","#00529b"],["murco","MURCO","#d71920","#fff"],["applegreen","APPLEGREEN","#6cb33f","#fff"],["total","TOTAL","#475467","#fff"],["maxol","MAXOL","#475467","#fff"],["harvest","HARVEST","#475467","#fff"],["circlek","CIRCLE K","#475467","#fff"],["welcome","WELCOME BREAK","#475467","#fff"]];
 // Simple drawn marks in each brand's colours (my own approximations, not the official artwork).
 const MARKS={
 esso:`<svg viewBox="0 0 64 64"><ellipse cx="32" cy="32" rx="29" ry="19" fill="#fff" stroke="#0b3f93" stroke-width="4"/><text x="32" y="39" text-anchor="middle" font-family="Georgia,serif" font-weight="900" font-style="italic" font-size="22" fill="#e1251b" textLength="40" lengthAdjust="spacingAndGlyphs">Esso</text></svg>`,
@@ -126,7 +132,8 @@ asda:`<svg viewBox="0 0 64 64"><rect width="64" height="64" fill="#78be20"/><tex
 costco:`<svg viewBox="0 0 64 64"><text x="32" y="33" text-anchor="middle" font-family="Arial,sans-serif" font-weight="900" font-size="15" fill="#e31837" textLength="56" lengthAdjust="spacingAndGlyphs">COSTCO</text><text x="32" y="47" text-anchor="middle" font-family="Arial,sans-serif" font-weight="800" font-size="9" fill="#005daa" textLength="52" lengthAdjust="spacingAndGlyphs">WHOLESALE</text></svg>`,
 eg:`<svg viewBox="0 0 64 64"><rect width="64" height="64" fill="#003a70"/><text x="32" y="43" text-anchor="middle" font-family="Arial,sans-serif" font-weight="900" font-size="30" fill="#fff" textLength="40" lengthAdjust="spacingAndGlyphs">eg</text></svg>`
 };
-function brandHit(k,t){return k==="eg"?/\beg\b|euro ?garages?/.test(t):(k==="bp"||k==="jet")?new RegExp("\\b"+k+"\\b").test(t):t.includes(k)}
+const RX={eg:/\beg\b|euro ?garages?/,bp:/\bbp\b/,jet:/\bjet\b/,total:/\btotal/,circlek:/circle ?k/,welcome:/welcome ?break/};
+function brandHit(k,t){return RX[k]?RX[k].test(t):t.includes(k)}
 function brand(s){const tests=[(s.b||"").toLowerCase(),(s.n||"").toLowerCase()];
  for(const t of tests)for(const b of BR)if(brandHit(b[0],t))return b;
  return["pump","⛽","#667085","#fff"]}
@@ -148,18 +155,46 @@ function colour(s){const v=s[S.fuel],t=thr[S.fuel];if(v==null||!t)return["#94a3b
 const starText=id=>isFav(id)?"★ Remove from my stations":"☆ Add to my stations";
 const starBtn=id=>`<button class="act star" data-id="${esc(id)}">${starText(id)}</button>`;
 
+// ---- fuel card discount: reduces the prices of stations that accept your card ----
+const brandOn=v=>v===true||v>0;
+const cardAccepts=s=>{const c=S.card,bk=s.bk||(s.bk=brand(s)[0]),ov=c.ov[String(s.i)];return ov!==undefined?ov:brandOn(c.brands[bk])};
+const cardDisc=(s,k)=>S.card.on&&cardAccepts(s)?(S.card.r[k]||0):0;
+function applyCard(){
+ for(const s of D.stations){
+  if(!s.o)s.o={d:s.d,p:s.p,sd:s.sd,sp:s.sp};
+  s.dc=null;
+  for(const k of["d","p","sd","sp"]){
+   const v=s.o[k];if(v==null){delete s[k];continue}
+   const x=cardDisc(s,k);s[k]=x?+(v-x).toFixed(1):v;if(x)(s.dc=s.dc||{})[k]=x;
+  }
+ }
+ for(const [k] of FUELS){const a=D.stations.map(s=>s[k]).filter(v=>v!=null).sort((x,y)=>x-y);if(a.length)thr[k]=[a[Math.floor(a.length*.33)],a[Math.floor(a.length*.66)]]}
+}
+function cardChanged(){saveS();applyCard();renderFavs();if(view==="near"&&loc)renderNearby();if(view==="best")bestRefresh();if(map)layers()}
+const cardTxt=s=>(cardAccepts(s)?"💳 Accepts my fuel card":"💳 Doesn’t accept my card")+" (tap to change)";
+const cardBtn=s=>`<button class="act cardb" data-id="${esc(s.i)}">${cardTxt(s)}</button>`;
+function handleCard(b,pop){
+ const s=byId[b.dataset.id];if(!s)return;
+ const c=S.card,id=String(s.i),want=!cardAccepts(s),bd=brandOn(c.brands[s.bk]);
+ if(want===bd)delete c.ov[id];else c.ov[id]=want;
+ saveS();applyCard();renderFavs();if(view==="near"&&loc)renderNearby();if(view==="best")bestRefresh();
+ if(pop){pop.setContent(popup(s));bindPop(pop);cardDirty=true}else{detail(id);if(map)layers()}
+}
+const inpCss="font:inherit;padding:6px;border-radius:8px;border:1px solid var(--line);background:var(--bg);color:var(--text)";
+const cardOptsHtml=()=>{if(!S.card.on)return"";const f=(k,t)=>`<label style="display:flex;justify-content:space-between;align-items:center;gap:6px">${t}<span><input id="cr_${k}" type="number" inputmode="decimal" step="0.5" min="0" max="30" value="${S.card.r[k]}" style="width:60px;${inpCss}"> p</span></label>`;return `<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px 14px;margin-top:8px;font-size:.85rem">${f("p","Synergy Unleaded")}${f("d","Synergy Diesel")}${f("sp","Supreme+ 99 Unleaded")}${f("sd","Supreme+ Diesel")}</div><div class="small" style="margin:6px 0 0">Pence off per litre at Esso stations, which then show the card price marked 💳. Change these if your card terms change. Tap an Esso station to mark it as not accepting the card.</div>`};
+const showCardBtn=s=>S.card.on&&(brandOn(S.card.brands[s.bk||(s.bk=brand(s)[0])])||S.card.ov[String(s.i)]!==undefined);
 fetch("data/stations.json?"+Date.now()).then(r=>r.json()).then(init).catch(()=>{$("stamp").textContent="Couldn’t load price data."});
 function init(d){
  D=d;d.stations.forEach(s=>byId[String(s.i)]=s);
  if(!d.stations.length){$("stamp").textContent="No data yet: run the “Refresh fuel prices” workflow in GitHub Actions.";return}
- for(const [k] of FUELS){const a=d.stations.map(s=>s[k]).filter(v=>v!=null).sort((x,y)=>x-y);if(a.length)thr[k]=[a[Math.floor(a.length*.33)],a[Math.floor(a.length*.66)]]}
+ applyCard();
  stamp();renderFavs();renderFillCard();
 }
 const stamp=()=>{$("stamp").textContent=`${FN[S.fuel]} first · data refreshed ${ago(D.updated)}`};
 
 function row(s,sub,best){const v=s[S.fuel],fc=S.tank&&v!=null?litres()*v/100:null,pm=v!=null?ppm(v):"";
  const l3=[fc!=null?`${gbp(fc)} for ${litres().toFixed(0)} L`:"",pm].filter(Boolean).join(" · ");
- return `<button class="row" data-id="${esc(s.i)}">${logo(s)}<div class="info"><div class="name">${isFav(s.i)?"★ ":""}${esc(label(s))}${best?'<span class="badge">Cheapest</span>':""}</div><div class="where">${esc(sub)}</div>${l3?`<div class="where" style="color:var(--text)">${esc(l3)}</div>`:""}</div><div class="price"><div class="big">${fp(v)}</div><div class="lab">${esc(FN[S.fuel])}</div></div></button>`}
+ return `<button class="row" data-id="${esc(s.i)}">${logo(s)}<div class="info"><div class="name">${isFav(s.i)?"★ ":""}${esc(label(s))}${best?'<span class="badge">Cheapest</span>':""}</div><div class="where">${esc(sub)}</div>${l3?`<div class="where" style="color:var(--text)">${esc(l3)}</div>`:""}</div><div class="price"><div class="big">${fp(v)}</div><div class="lab">${esc(FN[S.fuel])}${s.dc&&s.dc[S.fuel]?" 💳":""}</div></div></button>`}
 
 function renderFavs(){
  const k=S.fuel,list=favIds().map(i=>byId[i]).filter(Boolean).sort((a,b)=>((a[k]==null)-(b[k]==null))||(a[k]-b[k])||0);
@@ -204,10 +239,10 @@ document.addEventListener("keydown",e=>{if(e.key==="Escape")closeSheet()});
 function detail(id){
  const s=byId[id];if(!s)return;
  const order=[S.fuel,...FUELS.map(f=>f[0]).filter(k=>k!==S.fuel)];
- const tiles=order.filter(k=>k===S.fuel||s[k]!=null).map(k=>`<div class="fuel${k===S.fuel?" d":""}"><div class="lab">${FN[k]}</div><div class="big">${fp(s[k])}</div>${s[k]!=null?`<div class="tank">${[S.tank?gbp(litres()*s[k]/100)+" for "+litres().toFixed(0)+" L":"",ppm(s[k])].filter(Boolean).join(" · ")}</div>`:""}</div>`).join("");
+ const tiles=order.filter(k=>k===S.fuel||s[k]!=null).map(k=>`<div class="fuel${k===S.fuel?" d":""}"><div class="lab">${FN[k]}</div><div class="big">${fp(s[k])}</div>${s[k]!=null?`<div class="tank">${[S.tank?gbp(litres()*s[k]/100)+" for "+litres().toFixed(0)+" L":"",ppm(s[k])].filter(Boolean).join(" · ")}</div>`:""}${s.dc&&s.dc[k]?`<div class="tank">💳 ${s.dc[k]}p off (pump ${(s[k]+s.dc[k]).toFixed(1)}p)</div>`:""}</div>`).join("");
  sheet(`<div class="dh">${logo(s)}<h2>${esc(label(s))}</h2></div><div class="where">${esc(s.n)} · ${esc(s.pc)} · updated ${esc(ago(s.u))}</div>
  ${S.tank?`<p class="small">Cost for ${descP(S.fillPct,"nothing","a full tank")} (${litres().toFixed(0)} L)${S.car?" in your "+esc(S.car):""}${S.mpg?`, adding about ${fillMiles().toFixed(0)} miles`:""}:</p>`:""}<div class="fuels">${tiles}</div>
- <div class="acts">${starBtn(s.i)}<button class="act" id="show" data-id="${esc(s.i)}">Show on map</button><a class="act" target="_blank" rel="noopener" href="https://www.google.com/maps/dir/?api=1&destination=${s.la},${s.lo}">Directions</a>${viaLink(s)}<button class="act mute" id="hide">Close</button></div>`);
+ <div class="acts">${starBtn(s.i)}${showCardBtn(s)?cardBtn(s):""}<button class="act" id="show" data-id="${esc(s.i)}">Show on map</button><a class="act" target="_blank" rel="noopener" href="https://www.google.com/maps/dir/?api=1&destination=${s.la},${s.lo}">Directions</a>${viaLink(s)}<button class="act mute" id="hide">Close</button></div>`);
 }
 
 function settings(){
@@ -240,6 +275,7 @@ function handleStar(b){
 document.addEventListener("click",e=>{
  const t=e.target;
  const st=t.closest(".star");if(st&&!st.closest(".leaflet-popup")){handleStar(st);return}
+ const cb=t.closest(".cardb");if(cb&&!cb.closest(".leaflet-popup")){handleCard(cb);return}
  const r=t.closest(".row[data-id]");if(r){detail(r.dataset.id);return}
  if(t.id==="hide"){closeSheet();return}
  if(t.id==="show"){const s=byId[t.dataset.id];closeSheet();tab("map");map.setView([s.la,s.lo],15);return}
@@ -251,8 +287,10 @@ document.addEventListener("click",e=>{
 
 // map
 function popup(s){
- const tc=tankCost(s),others=FUELS.map(f=>f[0]).filter(k=>k!==S.fuel&&s[k]!=null).map(k=>`${FN[k]} ${fp(s[k])}`).join("<br>");
- return `<div class="pop"><b>${esc(label(s))}</b><br><span class="where">${esc(s.pc)}</span><br>${esc(FN[S.fuel])} <b>${fp(s[S.fuel])}</b>${tc!=null?` · ${gbp(tc)} / tank`:""}<br>${others}<br><span class="where">Updated ${esc(ago(s.u))}</span><br>${starBtn(s.i)}</div>`}
+ const k=S.fuel,v=s[k],tc=S.tank&&v!=null?litres()*v/100:null,pm=v!=null?ppm(v):"";
+ const others=FUELS.map(f=>f[0]).filter(x=>x!==k&&s[x]!=null).map(x=>`${FN[x]} ${fp(s[x])}`).join("<br>");
+ const dc=s.dc&&s.dc[k]?`<br><span class="where">💳 card price: ${s.dc[k]}p off (pump ${(v+s.dc[k]).toFixed(1)}p)</span>`:"";
+ return `<div class="pop"><b>${esc(label(s))}</b><br><span class="where">${esc(s.pc)}</span><br>${esc(FN[k])} <b>${fp(v)}</b>${dc}${tc!=null?`<br>${gbp(tc)} for ${litres().toFixed(0)} L`:""}${pm?` · ${pm}`:""}<br>${others}<br><span class="where">Updated ${esc(ago(s.u))}</span><br>${starBtn(s.i)}${showCardBtn(s)?" "+cardBtn(s):""}</div>`}
 function layers(){
  cl.clearLayers();
  for(const s of D.stations){
@@ -270,6 +308,7 @@ function favMarkers(){
   L.marker([s.la,s.lo],{icon:ic,zIndexOffset:gold?2000:1000}).bindPopup(()=>popup(s)).addTo(favLayer);
  });
 }
+function bindPop(p){const el=p.getElement();if(!el)return;const a=el.querySelector(".star"),c=el.querySelector(".cardb");if(a)a.onclick=()=>handleStar(a);if(c)c.onclick=()=>handleCard(c,p)}
 function buildMap(){
  if(map)return;
  map=L.map("map",{preferCanvas:true});
@@ -279,7 +318,8 @@ function buildMap(){
  layers();
  const pts=favIds().map(i=>byId[i]).filter(Boolean).map(s=>[s.la,s.lo]);
  if(pts.length)map.fitBounds(L.latLngBounds(pts),{padding:[40,40],maxZoom:13});else map.setView([52.5,-1.8],6);
- map.on("popupopen",e=>{const b=e.popup.getElement().querySelector(".star");if(b)b.onclick=()=>handleStar(b)});
+ map.on("popupopen",e=>bindPop(e.popup));
+ map.on("popupclose",()=>{if(cardDirty){cardDirty=false;layers()}});
  const btn=L.control({position:"topleft"});
  btn.onAdd=()=>{const b=L.DomUtil.create("button","act");b.textContent="📍 Near me";b.style.margin="10px";b.onclick=e=>{e.stopPropagation();if(me){map.setView(me,14)}else{map.locate({setView:true,maxZoom:14})}};return b};
  btn.addTo(map);
@@ -320,7 +360,7 @@ function fillMilesText(){
  if(!S.tank)return"Add your tank size in Settings to see what each fill costs.";
  if(!S.mpg)return"Add your mpg in Settings to see miles and cost per mile.";
  return`Adds about ${fillMiles().toFixed(0)} miles of driving. Costs below are for this fill.`}
-const renderFillCard=()=>{$("fillcard").innerHTML=`<div class="fld" style="margin:0">Fill-up: <b class="fillTxt" style="color:var(--text)">${fillText()}</b>${sliderHtml("fillR",S.fillPct)}<div class="small" id="fillMi" style="margin:0">${fillMilesText()}</div></div>`};
+const renderFillCard=()=>{$("fillcard").innerHTML=`<div class="fld" style="margin:0">Fill-up: <b class="fillTxt" style="color:var(--text)">${fillText()}</b>${sliderHtml("fillR",S.fillPct)}<div class="small" id="fillMi" style="margin:0">${fillMilesText()}</div></div><label class="chk" style="margin:12px 0 0"><input type="checkbox" id="cardOn"${S.card.on?" checked":""}> 💳 I have a WEX Esso fuel card</label><div id="cardOpts">${cardOptsHtml()}</div>`};
 const syncFill=()=>{document.querySelectorAll(".fillR").forEach(x=>{x.value=S.fillPct});document.querySelectorAll(".fillTxt").forEach(x=>{x.textContent=fillText()});const m=$("fillMi");if(m)m.textContent=fillMilesText()};
 const syncLvl=()=>{document.querySelectorAll(".lvlTxt").forEach(x=>{x.textContent=lvlText()})};
 const needMpg=()=>'<div class="empty">Add your car’s <b>mpg</b> in Settings so I can price the drive to each station.<br><br><button class="act" id="openSet">Open settings</button></div>';
@@ -534,6 +574,7 @@ document.addEventListener("click",e=>{
 });
 document.addEventListener("change",e=>{
  const id=e.target.id;
+ if(id==="cardOn"){S.card.on=e.target.checked;S.card.brands={esso:true};$("cardOpts").innerHTML=cardOptsHtml();cardChanged()}
  if(id==="aRound"){aroundUI.round=e.target.checked;renderAround()}
  if(id==="tCorr"){tripUI.corr=+e.target.value;if(trip)tripShow()}
  const cl=e.target.classList;
@@ -542,6 +583,7 @@ document.addEventListener("change",e=>{
 });
 document.addEventListener("input",e=>{
  const id=e.target.id;
+ if(id&&id.startsWith("cr_")){const k=id.slice(3),v=parseFloat(e.target.value);S.card.r[k]=v>=0?v:0;cardChanged()}
  if(id==="tFrom"||id==="tTo"){
   const w=id==="tFrom"?"from":"to";
   tripUI[w]=e.target.value;tripUI[w==="from"?"fp":"tp"]=null;trip=null;planSeq++;
