@@ -18,11 +18,19 @@ You need: a free GOV.UK One Login, a free GitHub account, and a free Cloudflare 
 3. Click **Edit code**, delete the sample, paste the contents of `cloudflare-worker.js`, and **Deploy**.
 4. Copy the Worker's address (ends in `.workers.dev`).
 
-## 4. Add the three secrets in GitHub
+## 4. Add the GitHub Actions secrets
 Repo, **Settings, Secrets and variables, Actions, New repository secret**:
 - `FF_CLIENT_ID`: your Client ID
 - `FF_CLIENT_SECRET`: your Client secret
 - `FF_BASE_URL`: the Worker address, **including `https://`**, with no trailing slash or spaces
+- `FF_PROXY_SECRET`: a long random secret shared with the Cloudflare Worker (create it in step 3A below).
+
+### 3A. Protect the Cloudflare proxy
+The Worker is public by URL, but its proxy must require a separate shared secret. Generate a random value of at least 32 bytes (for example, use a password manager's password generator). Do not use your GitHub token or GOV.UK API secret for this.
+
+In **Cloudflare, Workers & Pages, your Worker, Settings, Variables and Secrets**, add a **Secret** named `PROXY_SECRET` with that random value. In **GitHub, repository Settings, Secrets and variables, Actions**, add a repository secret named `FF_PROXY_SECRET` with exactly the same value. Do not put the value in source code or send it in chat.
+
+Then replace the Worker code with the updated `cloudflare-worker.js` from this project and deploy it. The Worker only forwards the OAuth token request and the two paginated data endpoints used by `scripts/refresh.py`. It does not forward the proxy secret to GOV.UK.
 
 ## 5. Turn on GitHub Pages
 Repo, **Settings, Pages, Build and deployment, Source: GitHub Actions**.
@@ -50,7 +58,7 @@ GitHub's own scheduler often only runs a few times a day, so let Cloudflare star
 
 **B. Update the Worker in Cloudflare**
 1. **Workers & Pages**, open your Worker, **Edit code**. Replace everything with the contents of `cloudflare-worker.js` (check the `GH_REPO` line at the top matches your GitHub username/repo), then **Deploy**.
-2. Open the Worker's **Settings**, then **Variables and Secrets**, **Add**. Type: **Secret**, name `GITHUB_TOKEN`, value: your token. Save and deploy.
+2. Open the Worker's **Settings**, then **Variables and Secrets**, **Add**. Type: **Secret**, name `GITHUB_TOKEN`, value: your token. Save. Also add the `PROXY_SECRET` secret as described in step 3A.
 3. In **Settings**, **Triggers** (also called **Trigger Events**), **Cron Triggers**, **Add**: `*/30 * * * *`, then save. (This is in UTC; use `0 * * * *` for hourly.)
 
 **C. Replace the workflow** (adds retries, and makes uploads reuse the last prices instead of calling the API; GitHub's own schedule becomes a slow backup)

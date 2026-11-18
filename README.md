@@ -49,7 +49,7 @@ The first runs from GitHub failed with `HTTP 403 Forbidden` at the login step, e
 How it's wired up:
 - The Worker receives each request from GitHub, removes Cloudflare's tracking headers, and forwards it to `www.fuel-finder.service.gov.uk`.
 - The GitHub secret `FF_BASE_URL` holds the Worker's address (`https://something.workers.dev`, including `https://`). `refresh.py` uses that instead of the government address.
-- The Worker is a plain pass-through. Anyone who knew its address could send requests through it, but they would still need valid API credentials, which only you have. It's sensible not to share the address.
+- The Worker requires a separate shared secret (`PROXY_SECRET` in Cloudflare and `FF_PROXY_SECRET` in GitHub Actions). It only accepts the OAuth token endpoint and the two paginated data endpoints used by the refresh script, and it does not forward the proxy secret to GOV.UK. The Worker URL itself is public; its security relies on keeping this shared secret private.
 - Usage is tiny: about 35 requests per refresh, roughly 1,700 a day, well within Cloudflare's free allowance (100,000 requests a day when this was set up).
 
 ## Best value tab
