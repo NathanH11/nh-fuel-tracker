@@ -84,7 +84,7 @@ The WEX Esso fuel card takes a set amount off each litre at Esso stations, and t
 
 - Every Esso station shows the card price for each fuel, marked 💳, with the pump price alongside in its details.
 - The discount counts everywhere: list order, map colours, Nearby, and the cost and ranking on the Best value tab.
-- The four rates are boxes under the tick box, so you can change them if your card terms change.
+- The four rates sit in ⚙️ Settings (under *WEX Esso fuel card discounts*), so you can change them if your card terms change. The tick box itself stays on the My stations tab.
 - Some Esso-branded sites (for example those inside other retailers) may not accept the card. Tap a station, then the 💳 button, to mark it as not accepting it (and tap again to put it back).
 - Everything is saved on the device, so each person sets up their own card.
 
