@@ -34,6 +34,7 @@ jobs:
           FF_CLIENT_ID: ${{ secrets.FF_CLIENT_ID }}
           FF_CLIENT_SECRET: ${{ secrets.FF_CLIENT_SECRET }}
           FF_BASE_URL: ${{ secrets.FF_BASE_URL }}
+          FF_PROXY_SECRET: ${{ secrets.FF_PROXY_SECRET }}
         run: |
           for attempt in 1 2 3; do
             python scripts/refresh.py && exit 0
