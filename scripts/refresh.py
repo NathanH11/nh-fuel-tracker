@@ -41,6 +41,7 @@ def http(method, url, body=None, token=None, tries=4):
                 return json.loads(r.read().decode())
         except urllib.error.HTTPError as e:
             body_txt = e.read().decode(errors="replace")[:500]
+            e.body_txt = body_txt  # keep the message for callers (the body can only be read once)
             is_end = "batch-number" in url and e.code in (400, 404)  # normal "no more batches" signal
             if not is_end:
                 print(f"HTTP {e.code} from {url}: {body_txt}", flush=True)
@@ -92,9 +93,25 @@ def get_token():
     if not cid or not sec:
         sys.exit("Set FF_CLIENT_ID and FF_CLIENT_SECRET.")
     print(f"Client ID length: {len(cid)}, secret length: {len(sec)}", flush=True)
-    j = http("POST", BASE + "/api/v1/oauth/generate_access_token",
-             {"client_id": cid, "client_secret": sec})
+    # The login is often locked for a few minutes ("Too many failed attempts. Try again in
+    # 5 minutes.") even though our credentials are fine. Wait exactly as long as it asks and
+    # try again, rather than failing the whole run and sleeping a fixed 6 minutes.
+    for n in range(3):
+        try:
+            j = http("POST", BASE + "/api/v1/oauth/generate_access_token",
+                     {"client_id": cid, "client_secret": sec})
+            break
+        except urllib.error.HTTPError as e:
+            if e.code != 429 or n == 2:
+                raise
+            m = re.search(r"(\d+)\s*minute", getattr(e, "body_txt", ""))
+            wait = int(m.group(1)) * 60 + 15 if m else 315
+            print(f"Login locked: waiting {wait} s, as the API asks, then trying again...", flush=True)
+            time.sleep(wait)
     inner = j.get("data", {}) if isinstance(j, dict) else {}
+    # Field names only (never values), to see whether the API offers a token lifetime or refresh token.
+    print("Login response fields:", sorted(j) if isinstance(j, dict) else type(j).__name__,
+          sorted(inner) if isinstance(inner, dict) else "", flush=True)
     tok = pick(j, "access_token") or pick(inner, "access_token")
     if not tok:
         sys.exit("No access token in the response. Check your credentials.")
