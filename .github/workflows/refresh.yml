@@ -15,13 +15,13 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 60
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-python@v5
+      - uses: actions/checkout@v7
+      - uses: actions/setup-python@v7
         with:
           python-version: "3.12"
       - name: Restore last good data
         id: cache
-        uses: actions/cache/restore@v4
+        uses: actions/cache/restore@v6
         with:
           path: docs/data/stations.json
           key: stations-${{ github.run_id }}
@@ -42,11 +42,11 @@ jobs:
           exit 1
       - name: Save data for next time
         if: success() && (github.event_name != 'push' || steps.cache.outputs.cache-matched-key == '')
-        uses: actions/cache/save@v4
+        uses: actions/cache/save@v6
         with:
           path: docs/data/stations.json
           key: stations-${{ github.run_id }}
-      - uses: actions/upload-pages-artifact@v3
+      - uses: actions/upload-pages-artifact@v5
         with:
           path: docs
   deploy:
@@ -57,4 +57,4 @@ jobs:
       url: ${{ steps.deployment.outputs.page_url }}
     steps:
       - id: deployment
-        uses: actions/deploy-pages@v4
+        uses: actions/deploy-pages@v5
