@@ -21,19 +21,20 @@
  --navh:0px;color-scheme:dark}
 *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
 html{background:var(--bg)}
-body{margin:0;min-height:100vh;background:
- radial-gradient(900px 420px at 85% -120px,rgba(192,38,211,.18),transparent 70%),
- radial-gradient(700px 380px at -10% -60px,rgba(232,32,127,.14),transparent 70%),var(--bg);
- background-attachment:fixed;color:var(--text);
+body{margin:0;min-height:100vh;background:var(--bg);color:var(--text);
  font:15.5px/1.45 ui-sans-serif,system-ui,-apple-system,"Segoe UI Variable Text","Segoe UI",Roboto,"Helvetica Neue",sans-serif;
  -webkit-font-smoothing:antialiased;font-feature-settings:"ss01","cv11"}
 button,input,select{font:inherit}
+/* the soft glow sits on its own fixed layer, so scrolling never repaints it */
+body::before{content:"";position:fixed;inset:0;z-index:-1;pointer-events:none;background:
+ radial-gradient(900px 420px at 85% -120px,rgba(192,38,211,.18),transparent 70%),
+ radial-gradient(700px 380px at -10% -60px,rgba(232,32,127,.14),transparent 70%)}
 ::selection{background:rgba(232,32,127,.35)}
 :focus-visible{outline:2px solid var(--accent);outline-offset:2px}
 
 /* ---------- top bar ---------- */
 .top{position:sticky;top:0;z-index:1100;padding-top:env(safe-area-inset-top,0);
- background:rgba(11,13,18,.72);-webkit-backdrop-filter:saturate(160%) blur(18px);backdrop-filter:saturate(160%) blur(18px);
+ background:var(--bg);
  border-bottom:1px solid rgba(255,255,255,.05)}
 .top-in{max-width:900px;margin:0 auto;padding:12px 16px;display:flex;align-items:center;gap:12px}
 .mark{flex:none;width:40px;height:40px;border-radius:12px;background:var(--grad);display:grid;place-items:center;box-shadow:0 6px 20px -6px rgba(232,32,127,.7)}
@@ -41,8 +42,7 @@ button,input,select{font:inherit}
 .ttl{flex:1;min-width:0}
 h1{font-size:1.08rem;font-weight:720;letter-spacing:-.015em;margin:0;line-height:1.2}
 .sub{color:var(--mute);font-size:.78rem;margin:2px 0 0;display:flex;align-items:center;gap:6px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.sub::before{content:"";flex:none;width:7px;height:7px;border-radius:50%;background:var(--good);box-shadow:0 0 0 0 rgba(34,197,94,.6);animation:pulse 2.4s infinite}
-@keyframes pulse{70%{box-shadow:0 0 0 7px rgba(34,197,94,0)}100%{box-shadow:0 0 0 0 rgba(34,197,94,0)}}
+.sub::before{content:"";flex:none;width:7px;height:7px;border-radius:50%;background:var(--good);box-shadow:0 0 6px rgba(34,197,94,.7)}
 #gear{flex:none;width:40px;height:40px;display:grid;place-items:center;background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.08);border-radius:12px;cursor:pointer;color:var(--text);transition:background .2s,transform .2s}
 #gear:hover{background:rgba(255,255,255,.1)}#gear:active{transform:scale(.94)}
 #gear svg{width:20px;height:20px}
@@ -59,7 +59,7 @@ main{max-width:900px;margin:0 auto;padding:16px 16px calc(24px + var(--navh))}
 @media (max-width:699px){
  :root{--navh:calc(68px + env(safe-area-inset-bottom,0px))}
  .tabs{position:fixed;left:0;right:0;bottom:0;z-index:1200;margin:0;border-radius:0;border:0;border-top:1px solid rgba(255,255,255,.07);
-  padding:6px 8px calc(6px + env(safe-area-inset-bottom,0px));background:rgba(13,15,21,.85);-webkit-backdrop-filter:saturate(160%) blur(20px);backdrop-filter:saturate(160%) blur(20px)}
+  padding:6px 8px calc(6px + env(safe-area-inset-bottom,0px));background:var(--bg)}
  .tabs button{flex-direction:column;gap:3px;font-size:.68rem;padding:7px 2px;border-radius:12px}
  .tabs button svg{width:22px;height:22px}
  .tabs button[aria-selected=true]{background:none;box-shadow:none;color:var(--text)}
@@ -70,7 +70,7 @@ section:not([hidden]){animation:rise .35s cubic-bezier(.2,.8,.2,1)}
 @keyframes rise{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:none}}
 
 /* ---------- station rows ---------- */
-.row{position:relative;display:flex;align-items:center;justify-content:space-between;gap:14px;width:100%;background:linear-gradient(180deg,rgba(255,255,255,.035),rgba(255,255,255,.015));border:1px solid rgba(255,255,255,.07);border-radius:var(--r);padding:12px 14px 12px 12px;margin-bottom:10px;color:inherit;text-align:left;cursor:pointer;box-shadow:var(--shadow);transition:transform .18s,border-color .18s,background .18s}
+.row{position:relative;display:flex;align-items:center;justify-content:space-between;gap:14px;width:100%;background:linear-gradient(180deg,rgba(255,255,255,.035),rgba(255,255,255,.015));border:1px solid rgba(255,255,255,.07);border-radius:var(--r);padding:12px 14px 12px 12px;margin-bottom:10px;color:inherit;text-align:left;cursor:pointer;transition:transform .18s,border-color .18s,background .18s}
 .row:hover{border-color:rgba(232,32,127,.45);background:linear-gradient(180deg,rgba(255,255,255,.055),rgba(255,255,255,.02))}
 .row:active{transform:scale(.985)}
 .row .info{flex:1;min-width:0}
@@ -101,7 +101,7 @@ section:not([hidden]){animation:rise .35s cubic-bezier(.2,.8,.2,1)}
 .h2{font-size:.74rem;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--mute);margin:18px 2px 10px;display:flex;justify-content:space-between}
 
 /* ---------- cards, empties, buttons ---------- */
-.fcard{background:linear-gradient(180deg,rgba(255,255,255,.035),rgba(255,255,255,.015));border:1px solid rgba(255,255,255,.07);border-radius:var(--r);padding:14px 16px;margin-bottom:4px;box-shadow:var(--shadow)}
+.fcard{background:linear-gradient(180deg,rgba(255,255,255,.035),rgba(255,255,255,.015));border:1px solid rgba(255,255,255,.07);border-radius:var(--r);padding:14px 16px;margin-bottom:4px}
 .empty{background:rgba(255,255,255,.02);border:1px dashed rgba(255,255,255,.12);border-radius:var(--r);padding:28px 20px;color:var(--mute);text-align:center;line-height:1.55}
 .empty b{color:var(--text)}
 .act{display:inline-flex;align-items:center;justify-content:center;gap:6px;background:var(--grad);color:#fff;border:0;border-radius:99px;padding:10px 16px;font-weight:650;font-size:.88rem;cursor:pointer;text-decoration:none;box-shadow:0 6px 18px -8px rgba(232,32,127,.8);transition:transform .15s,filter .15s}
@@ -112,7 +112,7 @@ section:not([hidden]){animation:rise .35s cubic-bezier(.2,.8,.2,1)}
 #more,#bMore{display:flex;margin:6px auto 0}
 
 /* ---------- bottom sheet ---------- */
-#sheet{position:fixed;inset:0;z-index:2000;display:flex;align-items:flex-end;justify-content:center;background:rgba(5,6,10,.55);-webkit-backdrop-filter:blur(6px);backdrop-filter:blur(6px);animation:fade .2s}
+#sheet{position:fixed;inset:0;z-index:2000;display:flex;align-items:flex-end;justify-content:center;background:rgba(5,6,10,.72);animation:fade .2s}
 #sheet[hidden]{display:none}
 #sheet .card{position:relative;background:linear-gradient(180deg,#1a1e2b,#141822);border:1px solid rgba(255,255,255,.08);border-bottom:0;width:100%;max-width:600px;border-radius:24px 24px 0 0;padding:26px 18px 18px;padding-bottom:calc(18px + env(safe-area-inset-bottom,0px));max-height:88vh;overflow:auto;box-shadow:0 -20px 60px -10px rgba(0,0,0,.7);animation:up .32s cubic-bezier(.2,.9,.25,1)}
 #sheet .card::before{content:"";position:absolute;top:9px;left:50%;width:38px;height:4px;margin-left:-19px;border-radius:2px;background:rgba(255,255,255,.18)}
@@ -480,7 +480,7 @@ const suggItems={from:[],to:[]},sugSeq={from:0,to:0},sugTimer={};
 const cpm=p=>p/100*GAL/S.mpg;            // £ per mile at p pence per litre
 const litres=()=>(S.tank||40)*(S.fillPct==null?100:S.fillPct)/100;
 const FRM={12.5:"⅛",25:"¼",37.5:"⅜",50:"½",62.5:"⅝",75:"¾",87.5:"⅞"};
-const descP=(p,z,f)=>p===0?z:p===100?f:(FRM[p]?FRM[p]+" tank":(+(+p).toFixed(1))+"% of tank");
+const descP=(p,z,f)=>p===0?z:p===100?f:(FRM[p]?FRM[p]+" tank":Math.round(p)+"% of tank");
 const RESERVE=15;                                         // miles of fuel you still want left when you fill up
 const tankL=()=>S.tank||40;
 const rangeNow=()=>S.mpg?tankL()/GAL*S.mpg*S.level/100:null;   // miles you can drive on the fuel in the tank now
@@ -488,10 +488,14 @@ const fillMiles=()=>S.mpg?litres()/GAL*S.mpg:null;            // miles the chose
 const buyPct=()=>S.useLevel?100-S.level:S.fillPct;
 const buyL=()=>tankL()*buyPct()/100;
 const ppm=p=>S.mpg?(cpm(p)*100).toFixed(1)+"p/mile":"";
-const snap=v=>{const n=Math.round(v/12.5)*12.5;return Math.abs(v-n)<=2?n:v};
-const fillText=()=>`${descP(S.fillPct,"Nothing","Full tank")} · ${litres().toFixed(0)} L${S.tank?"":" (40 L tank assumed)"}`;
+// Slider position -> whole litres, except that each eighth of the tank is a stop of its own:
+// it takes over only the litre nearest to it (within half a litre), so every other litre stays reachable.
+const snap=v=>{const T=tankL(),L=v/100*T,k=Math.round(v/12.5);
+ if(Math.abs(L-k*T/8)<0.5)return k*12.5;
+ return Math.min(100,Math.max(0,Math.round(L)/T*100))};
+const fillText=()=>`${descP(S.fillPct,"Nothing","Full tank")} · ${+litres().toFixed(1)} L${S.tank?"":" (40 L tank assumed)"}`;
 const lvlText=()=>`${descP(S.level,"Empty","Full")} · ${S.mpg?"about "+rangeNow().toFixed(0)+" miles of range":"add your mpg in Settings for range"}`;
-const sliderHtml=(cls,val)=>`<div class="tankwrap"><input type="range" class="${cls}" min="0" max="100" step="1" value="${val}" style="--p:${val}%"><div class="ticks">${[0,1,2,3,4,5,6,7,8].map(i=>`<i class="${i%2?"":"mj"}" style="left:${i*12.5}%"></i>`).join("")}${[[0,"0"],[2,"¼"],[4,"½"],[6,"¾"],[8,"Full"]].map(([i,t])=>`<b style="left:${i*12.5}%">${t}</b>`).join("")}</div></div>`;
+const sliderHtml=(cls,val)=>`<div class="tankwrap"><input type="range" class="${cls}" min="0" max="100" step="any" value="${val}" style="--p:${val}%"><div class="ticks">${[0,1,2,3,4,5,6,7,8].map(i=>`<i class="${i%2?"":"mj"}" style="left:${i*12.5}%"></i>`).join("")}${[[0,"0"],[2,"¼"],[4,"½"],[6,"¾"],[8,"Full"]].map(([i,t])=>`<b style="left:${i*12.5}%">${t}</b>`).join("")}</div></div>`;
 const fillHtml=()=>`<div class="fld">Amount to fill: <b class="fillTxt" style="color:var(--text)">${fillText()}</b>${sliderHtml("fillR",S.fillPct)}</div>`;
 const lvlInner=()=>`<label class="chk" style="margin:0 0 6px"><input type="checkbox" id="useLvl"${S.useLevel?" checked":""}> Account for the fuel I already have</label>${S.useLevel?`Fuel in tank now: <b class="lvlTxt" style="color:var(--text)">${lvlText()}</b>${sliderHtml("lvlR",S.level)}`:""}`;
 const levelHtml=()=>`<div class="fld" id="lvlBox">${lvlInner()}</div>`;
@@ -731,7 +735,7 @@ document.addEventListener("input",e=>{
   clearTimeout(sugTimer[w]);sugTimer[w]=setTimeout(()=>doSuggest(w,e.target.value),300);
  }
  const cl=e.target.classList;
- if(cl&&cl.contains("fillR")){const v=snap(+e.target.value);e.target.value=v;S.fillPct=v;saveS();syncFill();renderFavs()}
+ if(cl&&cl.contains("fillR")){const v=snap(+e.target.value);e.target.value=v;if(v===S.fillPct)return;S.fillPct=v;saveS();syncFill();renderFavs()}
  if(cl&&cl.contains("lvlR")){const v=snap(+e.target.value);e.target.value=v;e.target.style.setProperty("--p",v+"%");S.level=v;saveS();syncLvl()}
 });
 document.addEventListener("focusin",e=>{
